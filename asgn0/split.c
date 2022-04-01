@@ -19,14 +19,24 @@ int main(int argc, char **argv) {
         printf("Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]\n", delimiter);
         return 0;
     }
-
-    //printf("Delimiter: %lu\n", delimiter);
-
+    //iterate through files, read them in, and write the version that is split by the delimiter
     for (int i=2; i < argc; i++) {
 
-        char buffer[100];
-        int size = snprintf(buffer, 100, "File: %s\n", argv[i]);
-        write(1, buffer, size);
+        if (strcmp(argv[i], "-") == 0) {
+            printf("read from stdin\n");
+        }
+
+        else if (access(argv[i], F_OK) == 0) {
+            printf("file exists\n");
+            char buffer[100];
+            int size = snprintf(buffer, 100, "File: %s\n", argv[i]);
+            write(1, buffer, size);
+        }
+        else {
+            warn("%s", argv[i]);
+        }
+
+        
 
     //syscall(SYS_write, 1, , 120);
     }
