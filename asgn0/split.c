@@ -15,7 +15,8 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    printf("Delimiter: %lu\n", strlen(delimiter));
+    //test
+    //printf("Delimiter: %lu\n", delimiter);
 
     for (int i=2; i < argc; i++) {
         char buffer[100];
