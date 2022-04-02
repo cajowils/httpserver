@@ -8,13 +8,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int read_write(int fd, char *delimiter) {
+int replace(int fd, char *delimiter) {
     int bytes = 10000000;
     char *buf = (char *) calloc(bytes, sizeof(char));
     int size;
 
     while ((size = read(fd, buf, bytes)) > 0) {
-        for (int i=0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             buf[i] = (delimiter[0] == buf[i]) ? '\n' : buf[i];
         }
         write(1, buf, size);
@@ -26,7 +26,9 @@ int read_write(int fd, char *delimiter) {
 int main(int argc, char **argv) {
 
     if (argc < 3) {
-        //printf("Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n");
+        char *error = "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
+        //errx(EXIT_FAILURE, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
+        write(1, error, strlen(error));
         return 0;
     }
 
@@ -35,7 +37,11 @@ int main(int argc, char **argv) {
     //check if delimiter is > 1 char, otherwise use warn or err
 
     if (strlen(delimiter) > 1) {
+        char error[100];
+        snprintf(error, sizeof(error), "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]\n", delimiter);
+        //char *error = ();
         //printf("Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]\n", delimiter);
+        write(1, error, strlen(error));
         return 0;
     }
     //iterate through files, read them in, and write the version that is split by the delimiter
@@ -44,9 +50,9 @@ int main(int argc, char **argv) {
         int fd = open(argv[i], O_RDONLY);
 
         if (strcmp(argv[i], "-") == 0) {
-            read_write(0, delimiter);
+            replace(0, delimiter);
         } else if (fd != -1) {
-            read_write(fd, delimiter);
+            replace(fd, delimiter);
 
         } else {
             warn("%s", argv[i]);
