@@ -37,11 +37,11 @@ int main(int argc, char **argv) {
     //check if delimiter is > 1 char, otherwise use warn or err
 
     if (strlen(delimiter) > 1) {
-        char error[100];
-        snprintf(error, sizeof(error), "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]\n", delimiter);
-        //char *error = ();
-        //printf("Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]\n", delimiter);
-        write(1, error, strlen(error));
+        char *error1 = "Cannot handle multi-character splits: ";
+        char *error2 = "\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
+        write(1, error1, strlen(error1));
+        write(1, delimiter, strlen(delimiter));
+        write(1, error2, strlen(error2));
         return 0;
     }
     //iterate through files, read them in, and write the version that is split by the delimiter
