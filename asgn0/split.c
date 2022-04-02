@@ -26,9 +26,10 @@ int replace(int fd, char *delimiter) {
 int main(int argc, char **argv) {
 
     if (argc < 3) {
-        char *error = "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
+        //char *error = "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
         //errx(EXIT_FAILURE, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
-        write(1, error, strlen(error));
+        //write(1, error, strlen(error));
+        errx(-1, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
         return 0;
     }
 
