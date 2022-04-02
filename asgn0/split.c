@@ -8,6 +8,25 @@
 #include <sys/stat.h>
 #include <fcntl.h> 
 
+
+
+int read_write(int fd, char *delimiter) {
+    char *buf = (char *) calloc(100, sizeof(char));
+    int size = read(fd, buf, 1);
+    while (size > 0) {
+        //int size = snprintf(buf, 100, "File: %s\n", argv[i]);
+        if (strcmp(delimiter, buf) == 0) {
+            write(1, "\n", strlen("\n"));
+        }
+        else {
+            write(1, buf, size);
+        }
+        size = read(fd, buf, 1);
+    }
+    return 0;
+}
+
+
 int main(int argc, char **argv) {
     
     if (argc < 3) {
@@ -29,21 +48,10 @@ int main(int argc, char **argv) {
         int fd = open(argv[i], O_RDONLY);
 
         if (strcmp(argv[i], "-") == 0) {
-            printf("read from stdin\n");
+            read_write(0, delimiter);
         }
         else if (fd != -1) {
-            char *buf = (char *) calloc(100, sizeof(char));
-            int size = read(fd, buf, 1);
-            while (size > 0) {
-                //int size = snprintf(buf, 100, "File: %s\n", argv[i]);
-                if (strcmp(delimiter, buf) == 0) {
-                    write(1, "\n", strlen("\n"));
-                }
-                else {
-                    write(1, buf, size);
-                }
-                size = read(fd, buf, 1);
-            }
+            read_write(fd, delimiter);
             
         }
         else {
