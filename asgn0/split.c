@@ -9,16 +9,15 @@
 #include <fcntl.h>
 
 int read_write(int fd, char *delimiter) {
-    char *buf = (char *) calloc(100, sizeof(char));
-    int size = read(fd, buf, 1);
-    while (size > 0) {
-        if (strcmp(delimiter, buf) == 0) {
-            write(1, "\n", strlen("\n"));
-        } else {
-            write(1, buf, size);
+    int bytes = 10000000 char *buf = (char *) calloc(bytes, sizeof(char));
+    int size;
+    while ((size = read(fd, buf, bytes)) > 0) {
+        for (int i = 0; i < size; i++) {
+            buf[i] = (delimiter[0] == buf[i]) ? '\n' : buf[i];
         }
-        size = read(fd, buf, 1);
+        write(1, buf, size);
     }
+    free(buf);
     return 0;
 }
 
