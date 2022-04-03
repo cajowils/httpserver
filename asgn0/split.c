@@ -19,9 +19,9 @@ int replace(int fd, char *delimiter) {
             buf[i] = (delimiter[0] == buf[i]) ? '\n' : buf[i];
         }
         
-        /*if (write(1, buf, size) < 0) {
+        if (write(1, buf, size) < 0) {
             errx(28, "No space left on device");
-        }*/
+        }
     }
     free(buf);
     return 0;
@@ -51,8 +51,10 @@ int main(int argc, char **argv) {
 
         if (strcmp(argv[i], "-") == 0) {
             replace(0, delimiter);
+            close(0);
         } else if ((fd = open(argv[i], O_RDONLY)) > 0) {
             replace(fd, delimiter);
+            close(fd);
         } else {
             fail = 1;
             warn("%s", argv[i]);
