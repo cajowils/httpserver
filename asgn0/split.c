@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
         }
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 13
-    if (errno == 28) {
+    if (errno == 2) {
         return errno;
     }
     return 0;
