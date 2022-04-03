@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
         //char *error = "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
         //errx(EXIT_FAILURE, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
         //write(1, error, strlen(error));
-        errx(-1, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
+        errx(22, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
         return 0;
     }
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
         write(1, delimiter, strlen(delimiter));
         write(1, error2, strlen(error2));
         */
-        errx(-1, "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]",delimiter);
+        errx(22, "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]",delimiter);
         return 0;
     }
     //iterate through files, read them in, and write the version that is split by the delimiter
