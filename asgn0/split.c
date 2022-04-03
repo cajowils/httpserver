@@ -10,7 +10,7 @@
 #include <errno.h>
 
 int replace(int fd, char *delimiter) {
-    int bytes = 10000;
+    int bytes = 1000000;
     char *buf = (char *) calloc(bytes, sizeof(char));
     int size;
 
@@ -62,5 +62,5 @@ int main(int argc, char **argv) {
     if (fail == 1) {
         return errno; // or 2
     }
-    return 13;
+    return 0;
 }
