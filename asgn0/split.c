@@ -10,7 +10,7 @@
 #include <errno.h>
 
 int replace(int fd, char *delimiter) {
-    int bytes = 10000000;
+    int bytes = 10000;
     char *buf = (char *) calloc(bytes, sizeof(char));
     int size;
 
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
     if (fail == 1) {
-        return 2;
+        return errno;
     }
     return 0;
 }
