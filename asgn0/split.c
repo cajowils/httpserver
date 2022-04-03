@@ -20,7 +20,7 @@ int replace(int fd, char *delimiter) {
         }
         
         if (write(1, buf, size) == -1) {
-            errx(28, "No space left on device");
+            errx(errno, "No space left on device");
         }
     }
     free(buf);
@@ -55,12 +55,12 @@ int main(int argc, char **argv) {
 
         } else {
             fail = 1;
-            warn("%s", argv[i]);
+            warnx("%s: No such file or directory", argv[i]);
         }
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
     if (fail == 1) {
-        return errno;
+        return errno; // or 2
     }
     return 0;
 }
