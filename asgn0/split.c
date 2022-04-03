@@ -58,5 +58,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    return errno;
+    if (errno == 2 || errno == 22 || errno == 28) {
+        return errno;
+    }
+    return 0;
 }
