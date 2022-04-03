@@ -19,8 +19,11 @@ int replace(int fd, char *delimiter) {
             buf[i] = (delimiter[0] == buf[i]) ? '\n' : buf[i];
         }
         
-        if (write(1, buf, size) == -1) {
-            errx(errno, "No space left on device");
+        if (write(1, buf, size) < 0) {
+            //errx(errno, "No space left on device");
+            warnx("No space left on device");
+            return 28;
+
         }
     }
     free(buf);
