@@ -18,7 +18,7 @@ int replace(int fd, char *delimiter) {
         for (int i = 0; i < size; i++) {
             buf[i] = (delimiter[0] == buf[i]) ? '\n' : buf[i];
         }
-        
+
         if (write(1, buf, size) < 0) {
             errx(28, "No space left on device");
         }
@@ -39,14 +39,16 @@ int main(int argc, char **argv) {
     //check if delimiter is > 1 char, otherwise use warn or err
 
     if (strlen(delimiter) > 1) {
-        errx(22, "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]",delimiter);
+        errx(22,
+            "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> "
+            "<file2> ...]",
+            delimiter);
         return 0;
     }
     int fail = 0;
     //iterate through files, read them in, and write the version that is split by the delimiter
     for (int i = 2; i < argc; i++) {
 
-        
         int fd;
 
         if (strcmp(argv[i], "-") == 0) {
@@ -59,7 +61,6 @@ int main(int argc, char **argv) {
             fail = 1;
             warn("%s", argv[i]);
         }
-        
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
     if (fail == 1) {
