@@ -56,6 +56,6 @@ int main(int argc, char **argv) {
             warn("%s", argv[i]);
         }
     }
-
-    return errno;
+    if errno > 0 {return errno;}
+    return 0;
 }
