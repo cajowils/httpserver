@@ -55,12 +55,12 @@ int main(int argc, char **argv) {
 
         } else {
             fail = 1;
-            warnx("%s: No such file or directory", argv[i]);
+            warn("%s", argv[i]);
         }
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
     if (fail == 1) {
         return errno; // or 2
     }
-    return 0;
+    return 13;
 }
