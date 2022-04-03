@@ -21,6 +21,7 @@ int replace(int fd, char *delimiter) {
         write(1, buf, size);
         if (errno == 28) {
             warnx("No space left on device");
+            return 28;
         }
     }
     free(buf);
@@ -56,6 +57,6 @@ int main(int argc, char **argv) {
             warn("%s", argv[i]);
         }
     }
-    if (errno > 0) {return errno;}
+
     return 0;
 }
