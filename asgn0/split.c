@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
         errx(22, "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]",delimiter);
         return 0;
     }
+    int fail = 0;
     //iterate through files, read them in, and write the version that is split by the delimiter
     for (int i = 2; i < argc; i++) {
 
@@ -53,12 +54,13 @@ int main(int argc, char **argv) {
             replace(fd, delimiter);
 
         } else {
+            fail = 1;
             warn("%s", argv[i]);
         }
     }
-    // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 13
-    if (errno == 2) {
-        return errno;
+    // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
+    if (fail == 1) {
+        return 2;
     }
     return 0;
 }
