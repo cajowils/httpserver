@@ -20,8 +20,7 @@ int replace(int fd, char *delimiter) {
         }
         write(1, buf, size);
         if (errno == 28) {
-            warnx("No space left on device");
-            return 28;
+            errx(28, "No space left on device");
         }
     }
     free(buf);
@@ -57,8 +56,8 @@ int main(int argc, char **argv) {
             warn("%s", argv[i]);
         }
     }
-
-    if (errno == 2 || errno == 28) {
+    // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 13
+    if (errno == 28) {
         return errno;
     }
     return 0;
