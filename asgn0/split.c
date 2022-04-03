@@ -20,7 +20,7 @@ int replace(int fd, char *delimiter) {
         }
         write(1, buf, size);
         if (errno == 28) {
-            errx(errno, "No space left on device");
+            warnx("No space left on device");
         }
     }
     free(buf);
@@ -30,9 +30,6 @@ int replace(int fd, char *delimiter) {
 int main(int argc, char **argv) {
 
     if (argc < 3) {
-        //char *error = "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
-        //errx(EXIT_FAILURE, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
-        //write(1, error, strlen(error));
         errx(22, "Not enough arguments\nusage: ./split: <split_char> [<file1> <file2> ...]");
         return 0;
     }
@@ -42,12 +39,6 @@ int main(int argc, char **argv) {
     //check if delimiter is > 1 char, otherwise use warn or err
 
     if (strlen(delimiter) > 1) {
-        /*char *error1 = "Cannot handle multi-character splits: ";
-        char *error2 = "\nusage: ./split: <split_char> [<file1> <file2> ...]\n";
-        write(1, error1, strlen(error1));
-        write(1, delimiter, strlen(delimiter));
-        write(1, error2, strlen(error2));
-        */
         errx(22, "Cannot handle multi-character splits: %s\nusage: ./split: <split_char> [<file1> <file2> ...]",delimiter);
         return 0;
     }
