@@ -62,9 +62,9 @@ int main(int argc, char **argv) {
             replace(fd, delimiter);
 
         } else {
-            errx(2, "%s: No such file or directory", argv[i]);
+            warn("%s", argv[i]);
         }
     }
 
-    return 0;
+    return errno;
 }
