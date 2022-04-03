@@ -20,9 +20,9 @@ int replace(int fd, char *delimiter) {
         }
         
         if (write(1, buf, size) < 0) {
-            //errx(errno, "No space left on device");
-            warnx("No space left on device");
-            return 28;
+            errx(errno, "No space left on device");
+            //warnx("No space left on device");
+            //return 28;
 
         }
     }
@@ -49,17 +49,18 @@ int main(int argc, char **argv) {
     //iterate through files, read them in, and write the version that is split by the delimiter
     for (int i = 2; i < argc; i++) {
 
-        int fd = open(argv[i], O_RDONLY);
+        
+        int fd;
 
         if (strcmp(argv[i], "-") == 0) {
             replace(0, delimiter);
-        } else if (fd != -1) {
+        } else if ((fd = open(argv[i], O_RDONLY)) > 0) {
             replace(fd, delimiter);
-
         } else {
             fail = 1;
             warn("%s", argv[i]);
         }
+        
     }
     // to pass all but 2, return 0, else return errno to pass all but 8, 12 and 15
     if (fail == 1) {
