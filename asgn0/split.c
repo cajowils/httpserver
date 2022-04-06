@@ -50,13 +50,13 @@ int main(int argc, char **argv) {
 
     for (int i = 2; i < argc; i++) {
         int fd;
-        if (strcmp(argv[i], "-") == 0) {                    // Loads input from stdin
+        if (strcmp(argv[i], "-") == 0) { // Loads input from stdin
             replace(0, delimiter);
             close(0);
-        } else if ((fd = open(argv[i], O_RDONLY)) > 0) {    // Loads input from successful file
+        } else if ((fd = open(argv[i], O_RDONLY)) > 0) { // Loads input from successful file
             replace(fd, delimiter);
             close(fd);
-        } else {                                            // File not available, sending warning
+        } else { // File not available, sending warning
             fail = 1;
             warn("%s", argv[i]);
         }
