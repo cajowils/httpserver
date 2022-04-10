@@ -7,11 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+
+#include "methods.h"
+#include "requests.h"
 
 /**
    Converts a string to an 16 bits unsigned integer.
@@ -55,8 +59,25 @@ int create_listen_socket(uint16_t port) {
 }
 
 void handle_connection(int connfd) {
-    // make the compiler not complain
-    (void) connfd;
+    int bytes = 2048;
+    char *buf = (char *) calloc(bytes, sizeof(char));
+    int size;
+    printf("Start reading:\n");
+
+    size = read(connfd, buf, bytes);
+    struct request r = process_request(buf);
+    if (strcmp(r.line.method, "GET") == 0) {
+        GET();
+    }
+
+
+    write(1, buf, size);
+
+    printf("End reading\r\n");
+    printf("testing\n");
+    free(buf);
+    return;
+
 }
 
 int main(int argc, char *argv[]) {
