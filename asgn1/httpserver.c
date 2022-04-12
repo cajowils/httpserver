@@ -68,6 +68,13 @@ void handle_connection(int connfd) {
 
     size = read(connfd, buf, bytes);
 
+    /*for (int i = 0; i < size; i++) {
+        printf("char: %c\n", (char)buf[i]);
+        if ((char)buf[i] == '\r') {
+            printf("TESING\n");
+        }
+    }
+    printf("request: %s\n", buf);*/
     char req[size];
  
     strcpy(req, buf);

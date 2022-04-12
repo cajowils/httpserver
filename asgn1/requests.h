@@ -9,7 +9,7 @@ struct request_line {
 
 struct request {
     struct request_line line;
-    char **headers;
+    char *headers[100];
     char *body;
 };
 
