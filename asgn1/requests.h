@@ -13,6 +13,8 @@ struct request {
     char *body;
 };
 
-struct request process_request(char *buffer);
+//struct parse_request_line(char* req);
+
+struct request process_request(char *req);
 
 #endif

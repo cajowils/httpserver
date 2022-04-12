@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <regex.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -62,25 +63,41 @@ void handle_connection(int connfd) {
     int bytes = 2048;
     char *buf = (char *) calloc(bytes, sizeof(char));
     int size;
-    printf("Start reading:\n");
+    
+    printf("Reading Request:\n");
 
     size = read(connfd, buf, bytes);
-    struct request r = process_request(buf);
-    if (strcmp(r.line.method, "GET") == 0) {
-        GET();
+
+    char req[size];
+ 
+    strcpy(req, buf);
+
+    printf("Size of Req: %lu\n", strlen(req));
+
+      // parse the buffer for all of the request information and put it in a request struct
+    struct request r = process_request(req);
+
+    
+    
+    // check for errors in the request (wrong version, format, etc) and issue appropriate status
+    // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
+
+    
+    if (r.line.URI == NULL) {
+        printf("Invalid Request: No URI\n");
     }
 
-
-    write(1, buf, size);
-
-    printf("End reading\r\n");
-    printf("testing\n");
+    printf("End reading\n");
     free(buf);
+    //free request
     return;
 
 }
 
+
+
 int main(int argc, char *argv[]) {
+    
     int listenfd;
     uint16_t port;
 
@@ -96,6 +113,7 @@ int main(int argc, char *argv[]) {
 
     signal(SIGPIPE, SIG_IGN);
 
+
     while (1) {
         int connfd = accept(listenfd, NULL, NULL);
         if (connfd < 0) {
@@ -107,6 +125,7 @@ int main(int argc, char *argv[]) {
         // good code opens and closes objects in the same context. *sigh*
         close(connfd);
     }
+
 
     return EXIT_SUCCESS;
 }
