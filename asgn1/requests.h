@@ -7,10 +7,16 @@ struct request_line {
     char *version;
 };
 
+struct header {
+    char head[1048];
+    char val[1048];
+};
+
 struct request {
     struct request_line line;
-    char *headers[100];
+    struct header headers[100];
     char *body;
+    int num_headers;
 };
 
 //struct parse_request_line(char* req);
