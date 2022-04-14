@@ -19,8 +19,6 @@ struct request {
     int num_headers;
 };
 
-//struct parse_request_line(char* req);
-
-struct request process_request(char *req);
+struct request parse_request(char *req);
 
 #endif

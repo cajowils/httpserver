@@ -4,14 +4,7 @@
 #include <stdlib.h>
 #include "requests.h"
 
-
-/*struct parse_request_line(char* req) {
-    
-}*/
-
-
-
-struct request process_request(char *req) {
+struct request parse_request(char *req) {
 
     struct request r;
     
@@ -19,7 +12,6 @@ struct request process_request(char *req) {
     r.line.URI = (char *) calloc(1, sizeof(char));
     r.line.version = (char *) calloc(1, sizeof(char));
     r.body = (char *) calloc(1, sizeof(char));
-    //r.headers =  calloc(1, sizeof(char*));
     char buf[2048];
     int mode = 0;
     int s = 0; //iterater for the current buf
@@ -31,7 +23,6 @@ struct request process_request(char *req) {
 
     printf("Request:\n%s\n", req);
     for (int i = 0; i < (int)strlen(req)-1; i++) { //len(req)-1 because it cuts off the EOF at the end, preventing it from going into the body of the request
-        //printf("%c\n", req[i]);
         if (mode==0) { //dealing with the method
             if (req[i] == ' ') {
                 strncpy(r.line.method, buf, s);
@@ -69,14 +60,12 @@ struct request process_request(char *req) {
             }
         }
         else if (mode==3) {
-            //printf("Char: %c\n", req[i]);
             if (prev == '\r' && req[i] == '\n') {
                 if (stop_headers) {
                     mode ++;
                 }
                 else {
                     strncpy(r.headers[h].val, buf, s);
-                    //printf("Testing: %s\n", r.headers[h]);
                     h++;
                     stop_headers = 1;
                     before_colon = 1;
@@ -92,6 +81,7 @@ struct request process_request(char *req) {
                     strncpy(r.headers[h].head, buf, s);
                     before_colon = 0;
                     s=0;
+                    i++; // this skips the space and gets the value of the header
                 }
                 else {
                     buf[s] = req[i];
@@ -119,7 +109,7 @@ struct request process_request(char *req) {
     //printf("%d\n",r.num_headers);
     printf("Headers:\n");
     for (int q=0;q<r.num_headers; q++) {
-        printf("\t>%s:%s<\n", r.headers[q].head, r.headers[q].val);
+        printf("\t>%s: %s<\n", r.headers[q].head, r.headers[q].val);
     }
  
     printf("Body:\t>%s<\n", r.body);

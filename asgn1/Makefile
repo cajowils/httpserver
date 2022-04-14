@@ -1,14 +1,14 @@
 CFLAGS=-Wall -Wextra -Werror -pedantic
 CC=clang $(CFLAGS)
 
-httpserver:		httpserver.o methods.o requests.o
-				$(CC) -o httpserver httpserver.o methods.o requests.o
-httpserver.o:	methods.h requests.h httpserver.c
+httpserver:		httpserver.o requests.o response.o
+				$(CC) -o httpserver httpserver.o requests.o response.o
+httpserver.o:	requests.h response.h httpserver.c
 				$(CC) -c httpserver.c
-methods.o:		methods.h methods.c
-				$(CC) -c methods.c
 requests.o:		requests.h requests.c
 				$(CC) -c requests.c
+response.o:		response.h response.c
+				$(CC) -c response.c
 clean:
 				rm -f httpserver *.o
 infer:

@@ -15,8 +15,52 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#include "methods.h"
 #include "requests.h"
+#include "response.h"
+
+struct response status(struct response rsp, int error_code) {
+    rsp.line.code = error_code;
+    switch (error_code) {
+        case 505:
+            rsp.line.phrase = "HTTP Version Not Supported\n";
+            break;
+        case 404:
+            rsp.line.phrase = "File Not Found\n";
+            break;
+    }
+    rsp.num_headers = 1;
+    strcpy(rsp.headers[0].head, "Content-Length");
+    sprintf(rsp.headers[0].val, "%lu", strlen(rsp.headers[0].head));
+    return rsp;
+
+}
+
+struct response process_request(struct request req) {
+    struct response rsp;
+    rsp.line.version = "HTTP/1.1";
+    if (strcmp(req.line.version, rsp.line.version) != 0) {
+        return status(rsp, 505);
+    }
+
+    //look at method and decide if it is acceptable
+
+    //look at the URI and verify that it exists
+
+    //look at version and verify it is the right one
+
+    //read in the headers
+
+    //read the body if indicated by the method
+
+    
+
+
+
+    
+    return rsp;
+    
+}
+
 
 /**
    Converts a string to an 16 bits unsigned integer.
@@ -62,43 +106,26 @@ int create_listen_socket(uint16_t port) {
 void handle_connection(int connfd) {
     int bytes = 2048;
     char *buf = (char *) calloc(bytes, sizeof(char));
-    int size;
-    
-    printf("Reading Request:\n");
-
-    size = read(connfd, buf, bytes);
-
-    /*for (int i = 0; i < size; i++) {
-        printf("char: %c\n", (char)buf[i]);
-        if ((char)buf[i] == '\r') {
-            printf("TESING\n");
-        }
-    }
-    printf("request: %s\n", buf);*/
+    int size = read(connfd, buf, bytes);
     char req[size];
- 
     strcpy(req, buf);
 
-    printf("Size of Req: %lu\n", strlen(req));
-
       // parse the buffer for all of the request information and put it in a request struct
-    struct request r = process_request(req);
+    struct request r = parse_request(req);
+    
+    struct response rsp = process_request(r);
 
-    
-    
+    pack_response(rsp);
+
+    if (rsp.line.version == NULL) {
+        printf("Invalid Request: No version\n");
+    }
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
 
-    
-    if (r.line.URI == NULL) {
-        printf("Invalid Request: No URI\n");
-    }
-
-    printf("End reading\n");
     free(buf);
     //free request
     return;
-
 }
 
 
