@@ -16,6 +16,7 @@ struct response {
     struct response_line line;
     struct rsp_header headers[100];
     char *body;
+    int fd;
     int num_headers;
 };
 

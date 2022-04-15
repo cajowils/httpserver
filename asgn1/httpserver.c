@@ -53,14 +53,24 @@ struct response status(struct response rsp, int error_code) {
 }
 
 struct response GET(struct response rsp, struct request req) {
+    int bytes;
+    for (int i=0; i<req.num_headers; i++) {
+        if (strcmp(req.headers[i].head, "Content-Length")==0) {
+            printf("String %s vs num %d\n", req.headers[i].val, atoi(req.headers[i].val));
+            bytes = atoi(req.headers[i].val)-1;
+        }
+    }
+    printf("BYTES: %d\n", bytes);
     int fd;
-    int bytes = 1000000;
+    int total = 0;
     int size;
     rsp.body = (char *) calloc(bytes, sizeof(char));
     char *buf = (char *) calloc(bytes, sizeof(char));
     if ((fd = open(req.line.URI, O_RDONLY)) > 0) {
-        while ((size = read(fd, buf, bytes)) > 0) {
+        while ((size = read(fd, buf, bytes)) > 0 && total < bytes) {
+            printf("SIZE: %d\n", size);
             strncat(rsp.body, buf, size);
+            total += size;
         }
     }
     else {
