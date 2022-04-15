@@ -117,6 +117,15 @@ struct request parse_request(char *req) {
     return r;
 }
 
-/*char **parse(char *str) {
-    
-}*/
+void delete_request(struct request req) {
+    free(req.line.method);
+    free(req.line.URI);
+    free(req.line.version);
+    /*
+    for (int h = 0; h < req.num_headers; h++) {
+        free(req.headers[h].head);
+    }
+    */
+    free(req.body);
+    return;
+}

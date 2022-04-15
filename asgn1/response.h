@@ -21,4 +21,6 @@ struct response {
 
 char *pack_response(struct response rsp);
 
+void delete_response(struct response rsp);
+
 #endif

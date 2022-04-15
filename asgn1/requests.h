@@ -21,4 +21,6 @@ struct request {
 
 struct request parse_request(char *req);
 
+void delete_request(struct request req);
+
 #endif

@@ -19,27 +19,86 @@
 #include "response.h"
 
 struct response status(struct response rsp, int error_code) {
+    char message[100];
     rsp.line.code = error_code;
     switch (error_code) {
-        case 505:
-            rsp.line.phrase = "HTTP Version Not Supported\n";
+        case 200:
+            strcpy(message, "OK");
             break;
         case 404:
-            rsp.line.phrase = "File Not Found\n";
+            strcpy(message, "File Not Found");
+            break;
+        case 501:
+            strcpy(message, "Not Implemented");
+            break;
+        case 505:
+            strcpy(message, "HTTP Version Not Supported");
             break;
     }
+
+    if (rsp.body == NULL) {
+        rsp.body = (char *) calloc(1+(int)strlen(message), sizeof(char));
+        strcpy(rsp.body, message);
+    }
+    rsp.line.phrase = (char *) calloc((int)strlen(message), sizeof(char));
+    strcpy(rsp.line.phrase, message);
+    char nl = '\n';
+    strncat(rsp.body, &nl, 1);
+    
     rsp.num_headers = 1;
     strcpy(rsp.headers[0].head, "Content-Length");
-    sprintf(rsp.headers[0].val, "%lu", strlen(rsp.headers[0].head));
+    sprintf(rsp.headers[0].val, "%lu", strlen(rsp.body));
     return rsp;
 
 }
+
+struct response GET(struct response rsp, struct request req) {
+    int fd;
+    int bytes = 1000000;
+    int size;
+    rsp.body = (char *) calloc(bytes, sizeof(char));
+    char *buf = (char *) calloc(bytes, sizeof(char));
+    if ((fd = open(req.line.URI, O_RDONLY)) > 0) {
+        while ((size = read(fd, buf, bytes)) > 0) {
+            strncat(rsp.body, buf, size);
+        }
+    }
+    else {
+        return status(rsp, 404);
+    }
+    printf("%s\n", req.line.URI);
+    return status(rsp, 200);
+}
+
+struct response PUT(struct response rsp, struct request req) {
+    printf("%s\n", req.line.URI);
+    return rsp;
+}
+struct response APPEND(struct response rsp, struct request req) {
+    printf("%s\n", req.line.URI);
+    return rsp;
+}
+
+
 
 struct response process_request(struct request req) {
     struct response rsp;
     rsp.line.version = "HTTP/1.1";
     if (strcmp(req.line.version, rsp.line.version) != 0) {
         return status(rsp, 505);
+    }
+
+    if (strcmp(req.line.method, "GET")==0) {
+        rsp = GET(rsp, req);
+    }
+    else if (strcmp(req.line.method, "PUT")==0) {
+        rsp = PUT(rsp, req);
+    }
+    else if (strcmp(req.line.method, "APPEND")==0) {
+        rsp = APPEND(rsp, req);
+    }
+    else {
+        return status(rsp, 501);
     }
 
     //look at method and decide if it is acceptable
@@ -107,13 +166,13 @@ void handle_connection(int connfd) {
     int bytes = 2048;
     char *buf = (char *) calloc(bytes, sizeof(char));
     int size = read(connfd, buf, bytes);
-    char req[size];
-    strcpy(req, buf);
+    char r[size];
+    strcpy(r, buf);
 
       // parse the buffer for all of the request information and put it in a request struct
-    struct request r = parse_request(req);
+    struct request req = parse_request(r);
     
-    struct response rsp = process_request(r);
+    struct response rsp = process_request(req);
 
     pack_response(rsp);
 
@@ -125,6 +184,9 @@ void handle_connection(int connfd) {
 
     free(buf);
     //free request
+    printf("Fix delete functions pls\n");
+    delete_request(req);
+    delete_response(rsp);
     return;
 }
 
