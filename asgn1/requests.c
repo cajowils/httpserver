@@ -23,19 +23,20 @@ struct request parse_request(char *req) {
 
     printf("Request:\n%s\n", req);
     for (int i = 0; i < (int)strlen(req)-1; i++) { //len(req)-1 because it cuts off the EOF at the end, preventing it from going into the body of the request
-        if (mode==0) { //dealing with the method
+        if (mode==0) { //finding the method
             if (req[i] == ' ') {
                 strncpy(r.line.method, buf, s);
                 printf("Method\t>%s<\n", r.line.method);
                 mode++;
                 s = 0;
+                i++; //this skips the initial '/' of the URI
             }
             else {
                 buf[s] = req[i];
                 s++;
             }
         }
-        else if (mode==1) {
+        else if (mode==1) { //finding the URI
             if (req[i] == ' ') {
                 strncpy(r.line.URI, buf, s);
                 printf("URI\t>%s<\n", r.line.URI);
@@ -47,7 +48,7 @@ struct request parse_request(char *req) {
                 s++;
             }
         }
-        else if (mode==2) {
+        else if (mode==2) { //finding the version
             if (prev == '\r' && req[i] == '\n') {
                 strncpy(r.line.version, buf, s);
                 printf("Version\t>%s<\n", r.line.version);
@@ -59,7 +60,7 @@ struct request parse_request(char *req) {
                 s++;
             }
         }
-        else if (mode==3) {
+        else if (mode==3) { //finding the headers
             if (prev == '\r' && req[i] == '\n') {
                 if (stop_headers) {
                     mode ++;
@@ -90,11 +91,10 @@ struct request parse_request(char *req) {
                 }
             }
         }
-        else if (mode==4) {
+        else if (mode==4) { //finding the body of the request
             buf[s] = req[i];
             s++;
         }
-        
     prev = req[i];
     }
 
@@ -102,11 +102,6 @@ struct request parse_request(char *req) {
         strncpy(r.body, buf, s); //maybe set it to ignore end of file \n ?
     }
     
-    //int size = (int) (sizeof(r.headers)/sizeof(r.headers[0]));
-
-    
-    
-    //printf("%d\n",r.num_headers);
     printf("Headers:\n");
     for (int q=0;q<r.num_headers; q++) {
         printf("\t>%s: %s<\n", r.headers[q].head, r.headers[q].val);

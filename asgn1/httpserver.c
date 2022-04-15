@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "requests.h"
 #include "response.h"
@@ -21,9 +22,11 @@
 struct response status(struct response rsp, int error_code) {
     char message[100];
     rsp.line.code = error_code;
+    int success = 0;
     switch (error_code) {
         case 200:
             strcpy(message, "OK");
+            success = 1;
             break;
         case 404:
             strcpy(message, "File Not Found");
@@ -36,41 +39,34 @@ struct response status(struct response rsp, int error_code) {
             break;
     }
 
-    if (rsp.body == NULL) {
+    if (success == 0) {
         rsp.body = (char *) calloc(1+(int)strlen(message), sizeof(char));
         strcpy(rsp.body, message);
+        rsp.num_headers = 1;
+        strcpy(rsp.headers[0].head, "Content-Length");
+        sprintf(rsp.headers[0].val, "%lu", strlen(rsp.body));
     }
     rsp.line.phrase = (char *) calloc((int)strlen(message), sizeof(char));
     strcpy(rsp.line.phrase, message);
     char nl = '\n';
     strncat(rsp.body, &nl, 1);
     
-    rsp.num_headers = 1;
-    strcpy(rsp.headers[0].head, "Content-Length");
-    sprintf(rsp.headers[0].val, "%lu", strlen(rsp.body));
+    
     return rsp;
 
 }
 
 struct response GET(struct response rsp, struct request req) {
-    int bytes;
-    for (int i=0; i<req.num_headers; i++) {
-        if (strcmp(req.headers[i].head, "Content-Length")==0) {
-            printf("String %s vs num %d\n", req.headers[i].val, atoi(req.headers[i].val));
-            bytes = atoi(req.headers[i].val)-1;
-        }
-    }
+    int bytes = 100000;
     printf("BYTES: %d\n", bytes);
     int fd;
-    int total = 0;
     int size;
     rsp.body = (char *) calloc(bytes, sizeof(char));
     char *buf = (char *) calloc(bytes, sizeof(char));
     if ((fd = open(req.line.URI, O_RDONLY)) > 0) {
-        while ((size = read(fd, buf, bytes)) > 0 && total < bytes) {
+        while ((size = read(fd, buf, bytes)) > 0) {
             printf("SIZE: %d\n", size);
             strncat(rsp.body, buf, size);
-            total += size;
         }
     }
     else {
@@ -81,6 +77,13 @@ struct response GET(struct response rsp, struct request req) {
 }
 
 struct response PUT(struct response rsp, struct request req) {
+    int bytes;
+    for (int i=0; i<req.num_headers; i++) {
+        if (strcmp(req.headers[i].head, "Content-Length")==0) {
+            printf("String %s vs num %d\n", req.headers[i].val, atoi(req.headers[i].val));
+            bytes = atoi(req.headers[i].val)-1; //check if val is actually an int, otherwise return 400 bad request
+        }
+    }
     printf("%s\n", req.line.URI);
     return rsp;
 }
