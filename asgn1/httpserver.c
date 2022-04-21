@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <regex.h>
+#include <ctype.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -29,7 +30,7 @@ struct response status(struct response rsp, int error_code) {
             success = 1;
             break;
         case 404:
-            strcpy(message, "File Not Found");
+            strcpy(message, "Not Found");
             break;
         case 501:
             strcpy(message, "Not Implemented");
@@ -38,19 +39,14 @@ struct response status(struct response rsp, int error_code) {
             strcpy(message, "HTTP Version Not Supported");
             break;
     }
+    printf("MESSAGE: %s\nLEN: %lu\n", message, strlen(message));
+    strncpy(rsp.line.phrase, message, (int)strlen(message));
 
     if (success == 0) {
-        rsp.body = (char *) calloc(1+(int)strlen(message), sizeof(char));
-        strcpy(rsp.body, message);
         rsp.num_headers = 1;
         strcpy(rsp.headers[0].head, "Content-Length");
-        sprintf(rsp.headers[0].val, "%lu", strlen(rsp.body));
+        sprintf(rsp.headers[0].val, "%lu", strlen(rsp.line.phrase)+1);
     }
-    rsp.line.phrase = (char *) calloc((int)strlen(message), sizeof(char));
-    strcpy(rsp.line.phrase, message);
-    char nl = '\n';
-    strncat(rsp.body, &nl, 1);
-    
     
     return rsp;
 
@@ -60,18 +56,24 @@ struct response GET(struct response rsp, struct request req) {
     int bytes = 100000;
     printf("BYTES: %d\n", bytes);
     int fd;
-    int size;
-    rsp.body = (char *) calloc(bytes, sizeof(char));
-    char *buf = (char *) calloc(bytes, sizeof(char));
+    //int size;
+    //rsp.body = (char *) calloc(bytes, sizeof(char));
+    //char *buf = (char *) calloc(bytes, sizeof(char));
     if ((fd = open(req.line.URI, O_RDONLY)) > 0) {
-        while ((size = read(fd, buf, bytes)) > 0) {
-            printf("SIZE: %d\n", size);
-            strncat(rsp.body, buf, size);
-        }
+        rsp.fd = fd;
+        rsp.read = 1;
     }
     else {
         return status(rsp, 404);
     }
+    struct stat st;
+    fstat(rsp.fd, &st);
+    printf("size of file: %ld\n", st.st_size);
+    
+    strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
+    printf("tst2\n");
+    snprintf(rsp.headers[rsp.num_headers].val, 5, "%ld", st.st_size); // +1 because of the ending newline
+    rsp.num_headers++;
     printf("%s\n", req.line.URI);
     return status(rsp, 200);
 }
@@ -95,7 +97,7 @@ struct response APPEND(struct response rsp, struct request req) {
 
 
 struct response process_request(struct request req) {
-    struct response rsp;
+    struct response rsp = new_response();
     rsp.line.version = "HTTP/1.1";
     if (strcmp(req.line.version, rsp.line.version) != 0) {
         return status(rsp, 505);
@@ -133,6 +135,40 @@ struct response process_request(struct request req) {
     
 }
 
+void send_response(struct response rsp, int connfd) {
+    int size;
+    size = (int)strlen(rsp.line.version) + (int)strlen(rsp.line.phrase) + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
+    char buf[size];
+    snprintf(buf, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
+    write(connfd, buf, size);
+    for (int i=0; i < rsp.num_headers; i++) {
+        printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
+        size = (int)strlen(rsp.headers[i].head) + (int)strlen(rsp.headers[i].val) + 5;
+        char buf[size];
+        snprintf(buf, size, "%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
+        write(connfd, buf, size);
+    }
+    char *creturn = "\r\n";
+    write(connfd, creturn, strlen(creturn));
+    if (rsp.read) {
+        int size;
+        int bytes = 2048;
+        char buf[bytes];
+        while ((size = read(rsp.fd, buf, bytes)) > 0) {
+            write(connfd, buf, size);
+        }
+        char *nl = "\n";
+        write(connfd, nl, 1);
+    }
+    else {
+        size = (int)strlen(rsp.line.phrase) + 2;
+        char buf[size];
+        snprintf(buf, size, "%s\n", rsp.line.phrase);
+        write(connfd, buf, size);
+    }
+    
+    return;
+}
 
 /**
    Converts a string to an 16 bits unsigned integer.
@@ -177,17 +213,16 @@ int create_listen_socket(uint16_t port) {
 
 void handle_connection(int connfd) {
     int bytes = 2048;
-    char *buf = (char *) calloc(bytes, sizeof(char));
-    int size = read(connfd, buf, bytes);
-    char r[size];
-    strcpy(r, buf);
-
+    char r[bytes];
+    int size = read(connfd, r, bytes);
+    printf("Size: %d\n", size);
       // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request(r);
     
     struct response rsp = process_request(req);
+    printf("TEST2\n");
 
-    pack_response(rsp);
+    send_response(rsp, connfd);
 
     if (rsp.line.version == NULL) {
         printf("Invalid Request: No version\n");
@@ -195,11 +230,10 @@ void handle_connection(int connfd) {
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
 
-    free(buf);
+    //free(buf);
     //free request
-    printf("Fix delete functions pls\n");
     delete_request(req);
-    delete_response(rsp);
+    //delete_response(rsp);
     return;
 }
 

@@ -2,9 +2,9 @@
 #define __REQUESTS_H__
 
 struct request_line {
-    char *method;
-    char *URI;
-    char *version;
+    char method[10];
+    char URI[2048];
+    char version[10];
 };
 
 struct header {
@@ -20,6 +20,8 @@ struct request {
 };
 
 struct request parse_request(char *req);
+
+struct request new_request();
 
 void delete_request(struct request req);
 

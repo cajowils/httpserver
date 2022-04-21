@@ -4,23 +4,25 @@
 struct response_line {
     char *version;
     int code;
-    char *phrase;
+    char phrase[100];
 };
 
 struct rsp_header {
-    char head[1048];
-    char val[1048];
+    char head[1024];
+    char val[1024];
 };
 
 struct response {
     struct response_line line;
     struct rsp_header headers[100];
-    char *body;
     int fd;
     int num_headers;
+    int read;
 };
 
-char *pack_response(struct response rsp);
+void send_response(struct response rsp, int connfd);
+
+struct response new_response();
 
 void delete_response(struct response rsp);
 

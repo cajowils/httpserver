@@ -6,12 +6,12 @@
 
 struct request parse_request(char *req) {
 
-    struct request r;
+    struct request r = new_request();
     
-    r.line.method = (char *) calloc(1, sizeof(char));
+    /*r.line.method = (char *) calloc(1, sizeof(char));
     r.line.URI = (char *) calloc(1, sizeof(char));
-    r.line.version = (char *) calloc(1, sizeof(char));
-    r.body = (char *) calloc(1, sizeof(char));
+    r.line.version = (char *) calloc(1, sizeof(char));*/
+    
     char buf[2048];
     int mode = 0;
     int s = 0; //iterater for the current buf
@@ -37,6 +37,7 @@ struct request parse_request(char *req) {
             }
         }
         else if (mode==1) { //finding the URI
+            printf("char: %c\n", req[i]);
             if (req[i] == ' ') {
                 strncpy(r.line.URI, buf, s);
                 printf("URI\t>%s<\n", r.line.URI);
@@ -112,10 +113,14 @@ struct request parse_request(char *req) {
     return r;
 }
 
+struct request new_request() {
+    struct request req;
+    req.body = (char *) calloc(1, sizeof(char));
+    req.num_headers = 0;
+    return req;    
+}
+
 void delete_request(struct request req) {
-    free(req.line.method);
-    free(req.line.URI);
-    free(req.line.version);
     /*
     for (int h = 0; h < req.num_headers; h++) {
         free(req.headers[h].head);
