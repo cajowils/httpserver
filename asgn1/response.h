@@ -18,6 +18,7 @@ struct response {
     int fd;
     int num_headers;
     int mode;
+    int content_set;
 };
 
 struct response new_response();

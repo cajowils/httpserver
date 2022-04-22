@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <regex.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -20,18 +21,28 @@
 #include "requests.h"
 #include "response.h"
 
+/**
+   Converts a string to an 16 bits unsigned integer.
+   Returns 0 if the string is malformed or out of the range.
+ */
+uint16_t strtouint16(char number[]) {
+    char *last;
+    long num = strtol(number, &last, 10);
+    if (num <= 0 || num > UINT16_MAX || *last != '\0') {
+        return 0;
+    }
+    return num;
+}
+
 struct response status(struct response rsp, int error_code) {
     char message[100];
     rsp.line.code = error_code;
-    int success = 0;
     switch (error_code) {
         case 200:
             strcpy(message, "OK");
-            success = 1;
             break;
         case 201:
             strcpy(message, "Created");
-            success = 1;
             break;
         case 400:
             strcpy(message, "Bad Request");
@@ -55,10 +66,11 @@ struct response status(struct response rsp, int error_code) {
     printf("MESSAGE: %s\nLEN: %lu\n", message, strlen(message));
     strncpy(rsp.line.phrase, message, (int)strlen(message));
 
-    if (success == 0) {
-        rsp.num_headers = 1;
-        strcpy(rsp.headers[0].head, "Content-Length");
-        sprintf(rsp.headers[0].val, "%lu", strlen(rsp.line.phrase)+1);
+    if (rsp.content_set == 0) {
+        strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
+        sprintf(rsp.headers[rsp.num_headers].val, "%lu", strlen(rsp.line.phrase)+1);
+        rsp.num_headers++;
+        rsp.content_set++;
     }
     
     return rsp;
@@ -66,13 +78,10 @@ struct response status(struct response rsp, int error_code) {
 }
 
 struct response GET(struct response rsp, struct request req) {
-    int bytes = 100000;
-    printf("BYTES: %d\n", bytes);
-    int fd;
     //int size;
     //rsp.body = (char *) calloc(bytes, sizeof(char));
     //char *buf = (char *) calloc(bytes, sizeof(char));
-    switch (fd = open(req.line.URI, O_RDONLY)) {
+    switch (rsp.fd = open(req.line.URI, O_RDONLY)) {
         case ENOENT:
             return status(rsp, 404);
         case EACCES:
@@ -81,15 +90,14 @@ struct response GET(struct response rsp, struct request req) {
             return status(rsp, 403); //check this code because it may not be correct
     }
     
-    rsp.fd = fd;
     rsp.mode = 0;
     struct stat st;
     fstat(rsp.fd, &st);
     printf("size of file: %ld\n", st.st_size);
     
     strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
-    printf("tst2\n");
-    snprintf(rsp.headers[rsp.num_headers].val, 5, "%ld", st.st_size); // +1 because of the ending newline
+    rsp.content_set = 1;
+    snprintf(rsp.headers[rsp.num_headers].val, 5, "%ld", st.st_size);
     rsp.num_headers++;
     printf("%s\n", req.line.URI);
     return status(rsp, 200);
@@ -97,30 +105,37 @@ struct response GET(struct response rsp, struct request req) {
 
 struct response PUT(struct response rsp, struct request req) {
     rsp.mode = 1;
-    int bytes;
+    uint16_t bytes;
     int s;
     for (int i=0; i<req.num_headers; i++) {
         if (strcmp(req.headers[i].head, "Content-Length")==0) {
-            printf("String %s vs num %d\n", req.headers[i].val, atoi(req.headers[i].val));
-            bytes = atoi(req.headers[i].val); //check if val is actually an int, otherwise return 400 bad request
+            printf("String %s vs num %d\n", req.headers[i].val, strtouint16(req.headers[i].val));
+            if ((bytes = strtouint16(req.headers[i].val)) == 0) {
+                return status(rsp, 400);
+            }
             printf("bytes: %d\n", bytes);
         }
     }
-    switch (rsp.fd = open(req.line.URI, O_WRONLY)) {
+    rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
+    switch (errno) {
+        case ENOENT:
+            rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
+            s = 201;
+            break;
         case 0:
             s = 200;
-            break;
-        case ENOENT:
-            rsp.fd = open(req.line.URI, O_CREAT);
-            s = 201;
             break;
         case EACCES:
             return status(rsp, 403);
         case EISDIR:
             return status(rsp, 403); //check this code because it may not be correct
     }
-    
-    write(rsp.fd, req.body, bytes);
+    printf("fd: %d\n", rsp.fd);
+    if (bytes > req.body_size) {
+        bytes = req.body_size;
+    }
+    printf("LENGTH: %d\n", bytes);
+    printf("Code: %zd\n", write(rsp.fd, req.body, bytes));
     return status(rsp, s);
 }
 struct response APPEND(struct response rsp, struct request req) {
@@ -132,7 +147,6 @@ struct response APPEND(struct response rsp, struct request req) {
 
 struct response process_request(struct request req) {
     struct response rsp = new_response();
-    rsp.line.version = "HTTP/1.1";
     if (strcmp(req.line.version, rsp.line.version) != 0) {
         return status(rsp, 400);
     }
@@ -203,18 +217,7 @@ void send_response(struct response rsp, int connfd) {
     return;
 }
 
-/**
-   Converts a string to an 16 bits unsigned integer.
-   Returns 0 if the string is malformed or out of the range.
- */
-uint16_t strtouint16(char number[]) {
-    char *last;
-    long num = strtol(number, &last, 10);
-    if (num <= 0 || num > UINT16_MAX || *last != '\0') {
-        return 0;
-    }
-    return num;
-}
+
 
 /**
    Creates a socket for listening for connections.
@@ -285,6 +288,7 @@ int main(int argc, char *argv[]) {
 
 
     while (1) {
+        errno = 0;
         int connfd = accept(listenfd, NULL, NULL);
         if (connfd < 0) {
             warn("accept error");

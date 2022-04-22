@@ -23,7 +23,7 @@ struct request parse_request(char *req) {
     r.num_headers = 0;
 
     printf("Request:\n%s\n", req);
-    for (int i = 0; i < (int)strlen(req)-1; i++) { //len(req)-1 because it cuts off the EOF at the end, preventing it from going into the body of the request
+    for (int i = 0; i < (int)strlen(req); i++) { //len(req)-1 because it cuts off the EOF at the end, preventing it from going into the body of the request
         if (mode==0) { //finding the method
             if (req[i] == ' ') {
                 strncpy(r.line.method, buf, s);
@@ -99,8 +99,8 @@ struct request parse_request(char *req) {
         }
     prev = req[i];
     }
-
     if (s > 0) {
+        r.body_size = s;
         strncpy(r.body, buf, s); //maybe set it to ignore end of file \n ?
     }
     
@@ -116,8 +116,9 @@ struct request parse_request(char *req) {
 
 struct request new_request() {
     struct request req;
-    req.body = (char *) calloc(1, sizeof(char));
+    req.body = (char *) calloc(1, sizeof(char) * 2048);
     req.num_headers = 0;
+    req.body_size = 0;
     return req;    
 }
 
