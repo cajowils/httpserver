@@ -2,6 +2,7 @@
 #include <string.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "requests.h"
 
 struct request parse_request(char *req) {
@@ -32,7 +33,7 @@ struct request parse_request(char *req) {
                 i++; //this skips the initial '/' of the URI
             }
             else {
-                buf[s] = req[i];
+                buf[s] = toupper(req[i]);
                 s++;
             }
         }

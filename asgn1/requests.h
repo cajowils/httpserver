@@ -3,7 +3,7 @@
 
 struct request_line {
     char method[10];
-    char URI[2048];
+    char URI[20];
     char version[10];
 };
 

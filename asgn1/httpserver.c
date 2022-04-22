@@ -29,15 +29,28 @@ struct response status(struct response rsp, int error_code) {
             strcpy(message, "OK");
             success = 1;
             break;
+        case 201:
+            strcpy(message, "Created");
+            success = 1;
+            break;
+        case 400:
+            strcpy(message, "Bad Request");
+            break;
+        case 403:
+            strcpy(message, "Forbidden");
+            break;
         case 404:
             strcpy(message, "Not Found");
+            break;
+        case 500:
+            strcpy(message, "Internal Server Error");
             break;
         case 501:
             strcpy(message, "Not Implemented");
             break;
-        case 505:
+        /*case 505:
             strcpy(message, "HTTP Version Not Supported");
-            break;
+            break;*/
     }
     printf("MESSAGE: %s\nLEN: %lu\n", message, strlen(message));
     strncpy(rsp.line.phrase, message, (int)strlen(message));
@@ -59,13 +72,17 @@ struct response GET(struct response rsp, struct request req) {
     //int size;
     //rsp.body = (char *) calloc(bytes, sizeof(char));
     //char *buf = (char *) calloc(bytes, sizeof(char));
-    if ((fd = open(req.line.URI, O_RDONLY)) > 0) {
-        rsp.fd = fd;
-        rsp.read = 1;
+    switch (fd = open(req.line.URI, O_RDONLY)) {
+        case ENOENT:
+            return status(rsp, 404);
+        case EACCES:
+            return status(rsp, 403);
+        case EISDIR:
+            return status(rsp, 403); //check this code because it may not be correct
     }
-    else {
-        return status(rsp, 404);
-    }
+    
+    rsp.fd = fd;
+    rsp.mode = 0;
     struct stat st;
     fstat(rsp.fd, &st);
     printf("size of file: %ld\n", st.st_size);
@@ -79,15 +96,32 @@ struct response GET(struct response rsp, struct request req) {
 }
 
 struct response PUT(struct response rsp, struct request req) {
+    rsp.mode = 1;
     int bytes;
+    int s;
     for (int i=0; i<req.num_headers; i++) {
         if (strcmp(req.headers[i].head, "Content-Length")==0) {
             printf("String %s vs num %d\n", req.headers[i].val, atoi(req.headers[i].val));
-            bytes = atoi(req.headers[i].val)-1; //check if val is actually an int, otherwise return 400 bad request
+            bytes = atoi(req.headers[i].val); //check if val is actually an int, otherwise return 400 bad request
+            printf("bytes: %d\n", bytes);
         }
     }
-    printf("%s\n", req.line.URI);
-    return rsp;
+    switch (rsp.fd = open(req.line.URI, O_WRONLY)) {
+        case 0:
+            s = 200;
+            break;
+        case ENOENT:
+            rsp.fd = open(req.line.URI, O_CREAT);
+            s = 201;
+            break;
+        case EACCES:
+            return status(rsp, 403);
+        case EISDIR:
+            return status(rsp, 403); //check this code because it may not be correct
+    }
+    
+    write(rsp.fd, req.body, bytes);
+    return status(rsp, s);
 }
 struct response APPEND(struct response rsp, struct request req) {
     printf("%s\n", req.line.URI);
@@ -100,7 +134,7 @@ struct response process_request(struct request req) {
     struct response rsp = new_response();
     rsp.line.version = "HTTP/1.1";
     if (strcmp(req.line.version, rsp.line.version) != 0) {
-        return status(rsp, 505);
+        return status(rsp, 400);
     }
 
     if (strcmp(req.line.method, "GET")==0) {
@@ -128,8 +162,6 @@ struct response process_request(struct request req) {
 
     
 
-
-
     
     return rsp;
     
@@ -138,7 +170,7 @@ struct response process_request(struct request req) {
 void send_response(struct response rsp, int connfd) {
     int size;
     size = (int)strlen(rsp.line.version) + (int)strlen(rsp.line.phrase) + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
-    char buf[size];
+    char buf[2048];
     snprintf(buf, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, buf, size);
     for (int i=0; i < rsp.num_headers; i++) {
@@ -150,22 +182,23 @@ void send_response(struct response rsp, int connfd) {
     }
     char *creturn = "\r\n";
     write(connfd, creturn, strlen(creturn));
-    if (rsp.read) {
+
+    if (rsp.mode == 0) {
         int size;
         int bytes = 2048;
         char buf[bytes];
         while ((size = read(rsp.fd, buf, bytes)) > 0) {
             write(connfd, buf, size);
         }
-        char *nl = "\n";
-        write(connfd, nl, 1);
+        return;
     }
-    else {
-        size = (int)strlen(rsp.line.phrase) + 2;
-        char buf[size];
-        snprintf(buf, size, "%s\n", rsp.line.phrase);
-        write(connfd, buf, size);
-    }
+
+    size = (int)strlen(rsp.line.phrase) + 2;
+    char buf2[size];
+    snprintf(buf2, size, "%s\n", rsp.line.phrase);
+    write(connfd, buf2, size);
+
+        
     
     return;
 }
@@ -214,25 +247,19 @@ int create_listen_socket(uint16_t port) {
 void handle_connection(int connfd) {
     int bytes = 2048;
     char r[bytes];
-    int size = read(connfd, r, bytes);
-    printf("Size: %d\n", size);
+    read(connfd, r, bytes);
       // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request(r);
     
     struct response rsp = process_request(req);
-    printf("TEST2\n");
 
     send_response(rsp, connfd);
 
-    if (rsp.line.version == NULL) {
-        printf("Invalid Request: No version\n");
-    }
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
 
-    //free(buf);
-    //free request
     delete_request(req);
+    close(rsp.fd);
     //delete_response(rsp);
     return;
 }

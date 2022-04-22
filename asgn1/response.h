@@ -17,10 +17,8 @@ struct response {
     struct rsp_header headers[100];
     int fd;
     int num_headers;
-    int read;
+    int mode;
 };
-
-void send_response(struct response rsp, int connfd);
 
 struct response new_response();
 

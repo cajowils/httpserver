@@ -8,7 +8,7 @@ struct response new_response() {
     struct response rsp;
     rsp.line.version = "HTTP/1.1";
     rsp.num_headers = 0;
-    rsp.read = 0;
+    rsp.mode = -1;
     return rsp;
 }
 
