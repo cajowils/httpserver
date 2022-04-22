@@ -13,4 +13,6 @@ clean:
 				rm -f httpserver *.o
 infer:
 				make clean; infer-capture -- make; infer-analyze -- make
+format:
+				clang-format *.c *.h
 all:			httpserver
