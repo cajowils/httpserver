@@ -101,7 +101,7 @@ struct request parse_request(char *req) {
     }
     if (s > 0) {
         r.body_size = s;
-        strncpy(r.body, buf, s); //maybe set it to ignore end of file \n ?
+        strncpy(r.body, buf, s);
     }
     
     printf("Headers:\n");

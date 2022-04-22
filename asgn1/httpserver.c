@@ -63,7 +63,6 @@ struct response status(struct response rsp, int error_code) {
             strcpy(message, "HTTP Version Not Supported");
             break;*/
     }
-    printf("MESSAGE: %s\nLEN: %lu\n", message, strlen(message));
     strncpy(rsp.line.phrase, message, (int)strlen(message));
 
     if (rsp.content_set == 0) {
@@ -93,7 +92,6 @@ struct response GET(struct response rsp, struct request req) {
     rsp.mode = 0;
     struct stat st;
     fstat(rsp.fd, &st);
-    printf("size of file: %ld\n", st.st_size);
     
     strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
     rsp.content_set = 1;
@@ -109,11 +107,9 @@ struct response PUT(struct response rsp, struct request req) {
     int s;
     for (int i=0; i<req.num_headers; i++) {
         if (strcmp(req.headers[i].head, "Content-Length")==0) {
-            printf("String %s vs num %d\n", req.headers[i].val, strtouint16(req.headers[i].val));
             if ((bytes = strtouint16(req.headers[i].val)) == 0) {
                 return status(rsp, 400);
             }
-            printf("bytes: %d\n", bytes);
         }
     }
     rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
@@ -130,17 +126,45 @@ struct response PUT(struct response rsp, struct request req) {
         case EISDIR:
             return status(rsp, 403); //check this code because it may not be correct
     }
-    printf("fd: %d\n", rsp.fd);
+
     if (bytes > req.body_size) {
         bytes = req.body_size;
     }
-    printf("LENGTH: %d\n", bytes);
-    printf("Code: %zd\n", write(rsp.fd, req.body, bytes));
+ 
+    write(rsp.fd, req.body, bytes);
+
     return status(rsp, s);
 }
 struct response APPEND(struct response rsp, struct request req) {
-    printf("%s\n", req.line.URI);
-    return rsp;
+    rsp.mode = 2;
+    uint16_t bytes;
+    int s;
+    for (int i=0; i<req.num_headers; i++) {
+        if (strcmp(req.headers[i].head, "Content-Length")==0) {
+            if ((bytes = strtouint16(req.headers[i].val)) == 0) {
+                return status(rsp, 400);
+            }
+        }
+    }
+    
+    rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
+
+    switch (errno) {
+        case 0:
+            s = 200;
+            break;
+        case ENOENT:
+            return status(rsp, 404);
+        case EACCES:
+            return status(rsp, 403);
+        case EISDIR:
+            return status(rsp, 403); //check this code because it may not be correct
+    }
+    if (bytes > req.body_size) {
+        bytes = req.body_size;
+    }
+    write(rsp.fd, req.body, bytes);
+    return status(rsp, s);
 }
 
 
