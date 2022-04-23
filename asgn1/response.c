@@ -69,7 +69,6 @@ struct response GET(struct response rsp, struct request req) {
     //int size;
     //rsp.body = (char *) calloc(bytes, sizeof(char));
     //char *buf = (char *) calloc(bytes, sizeof(char));
-    errno = 0;
     rsp.fd = open(req.line.URI, O_RDONLY);
     switch (errno) {
         case ENOENT:
@@ -103,7 +102,6 @@ struct response PUT(struct response rsp, struct request req) {
             }
         }
     }
-    errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
     switch (errno) {
         case ENOENT:
@@ -138,8 +136,7 @@ struct response APPEND(struct response rsp, struct request req) {
             }
         }
     }
-    
-    errno = 0;
+
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
     switch (errno) {
         case 0:
