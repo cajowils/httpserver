@@ -5,6 +5,90 @@
 #include <ctype.h>
 #include "requests.h"
 
+struct request parse_request_regex(char *r) {
+    struct request req = new_request();
+
+    const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])";
+    const char* method_pattern = "(GET|PUT|APPEND)";
+
+    regex_t re;
+    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
+        req.error = 500;
+        return req;
+    }
+
+    int num_groups = 5;
+    regmatch_t groups[num_groups];
+
+    /* 
+    GROUPING:
+
+    GET /tests/foo.txt HTTP/1.1
+
+    0: Whole match (as above)
+    1: Method (GET)
+    2: Whole URI without leading "/" (tests/foo.txt)
+    3: Last part of URI (/foo.txt)
+    4: HTTP version (HTTP/1.1)
+
+    */
+
+    int result = regexec(&re, r, num_groups, groups, 0);
+    if (result == 0) {
+        for (int i = 0; i < num_groups; i++) {
+            if (groups[i].rm_so == -1) {
+                req.error = 400;
+                return req;
+            }
+            
+            switch (i) {
+                case 1: {
+                int size = groups[i].rm_eo - groups[i].rm_so;
+                strncpy(req.line.method, r + groups[i].rm_so, size);
+
+                regex_t re_method;
+                if (regcomp(&re_method, method_pattern, REG_EXTENDED | REG_ICASE) != 0) {
+                    req.error = 500;
+                    return req;
+                }
+                if (regexec(&re_method, req.line.method, 0, NULL, 0) == REG_NOMATCH) {
+                    req.error = 501;
+                    return req;
+                }
+
+
+                break;
+                }
+            }
+            
+        }
+
+
+        
+        
+
+
+
+    }
+    else {
+        req.error = 400;
+        return req;
+    }
+
+    
+
+
+
+
+
+    regfree(&re);
+    return req;
+
+
+
+
+}
+
 struct request parse_request(char *req) {
 
     //char *re = "^([a-zA-Z]+) \\/((?:\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])";

@@ -69,7 +69,9 @@ struct response GET(struct response rsp, struct request req) {
     //int size;
     //rsp.body = (char *) calloc(bytes, sizeof(char));
     //char *buf = (char *) calloc(bytes, sizeof(char));
-    switch (rsp.fd = open(req.line.URI, O_RDONLY)) {
+    errno = 0;
+    rsp.fd = open(req.line.URI, O_RDONLY);
+    switch (errno) {
         case ENOENT:
             return status(rsp, 404);
         case EACCES:
@@ -160,8 +162,9 @@ struct response APPEND(struct response rsp, struct request req) {
 
 struct response process_request(struct request req) {
     struct response rsp = new_response();
-    if (strcmp(req.line.version, rsp.line.version) != 0) {
-        return status(rsp, 400);
+    if (req.error != 0) {
+        printf("error\n");
+        return status(rsp, req.error);
     }
 
     if (strcmp(req.line.method, "GET")==0) {

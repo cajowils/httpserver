@@ -21,6 +21,8 @@ struct request {
     int error;
 };
 
+struct request parse_request_regex(char *r);
+
 struct request parse_request(char *req);
 
 struct request new_request();
