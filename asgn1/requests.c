@@ -7,6 +7,8 @@
 
 struct request parse_request(char *req) {
 
+    //char *re = "^([a-zA-Z]+) \\/((?:\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])";
+
     struct request r = new_request();
     
     /*r.line.method = (char *) calloc(1, sizeof(char));
@@ -80,7 +82,7 @@ struct request parse_request(char *req) {
                 
             }
             else if (req[i] != '\r') {
-                if (req[i] == ':') {
+                if (req[i] == ':' && before_colon) {
                     strncpy(r.headers[h].head, buf, s);
                     before_colon = 0;
                     s=0;
@@ -119,6 +121,7 @@ struct request new_request() {
     req.body = (char *) calloc(1, sizeof(char) * 2048);
     req.num_headers = 0;
     req.body_size = 0;
+    req.error = 0;
     return req;    
 }
 

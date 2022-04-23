@@ -18,6 +18,7 @@ struct request {
     char *body;
     int num_headers;
     int body_size;
+    int error;
 };
 
 struct request parse_request(char *req);

@@ -21,6 +21,16 @@ struct response {
     int content_set;
 };
 
+struct response status(struct response rsp, int error_code);
+
+struct response GET(struct response rsp, struct request req);
+
+struct response PUT(struct response rsp, struct request req);
+
+struct response APPEND(struct response rsp, struct request req);
+
+struct response process_request(struct request req);
+
 struct response new_response();
 
 void delete_response(struct response rsp);
