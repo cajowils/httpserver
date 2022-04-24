@@ -1,20 +1,17 @@
 #ifndef __RESPONSE_H__
 #define __RESPONSE_H__
 
+#include "list.h"
+
 struct response_line {
     char *version;
     int code;
-    char phrase[100];
-};
-
-struct rsp_header {
-    char head[1024];
-    char val[1024];
+    char *phrase;
 };
 
 struct response {
     struct response_line line;
-    struct rsp_header headers[100];
+    Node *headers;
     int fd;
     int num_headers;
     int mode;

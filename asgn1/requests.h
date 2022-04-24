@@ -1,20 +1,17 @@
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
+#include "list.h"
+
 struct request_line {
     char method[10];
     char URI[20];
     char version[10];
 };
 
-struct header {
-    char head[1048];
-    char val[1048];
-};
-
 struct request {
     struct request_line line;
-    struct header headers[100];
+    Node *headers;
     char *body;
     int num_headers;
     int body_size;

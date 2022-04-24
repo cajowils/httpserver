@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdint.h>
 
 uint16_t strtouint16(char number[]) {
     char *last;

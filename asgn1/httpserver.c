@@ -21,6 +21,7 @@
 #include "requests.h"
 #include "response.h"
 #include "helper.h"
+#include "list.h"
 
 /**
    Converts a string to an 16 bits unsigned integer.
@@ -34,31 +35,33 @@ void send_response(struct response rsp, int connfd) {
     char buf[2048];
     snprintf(buf, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, buf, size);
-    for (int i=0; i < rsp.num_headers; i++) {
+    Node *ptr = rsp.headers->next;
+    while (ptr != NULL) {
         //printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
-        size = (int)strlen(rsp.headers[i].head) + (int)strlen(rsp.headers[i].val) + 5;
+        size = (int)strlen(ptr->head) + (int)strlen(ptr->val) + 5;
         char buf[size];
-        snprintf(buf, size, "%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
+        snprintf(buf, size, "%s: %s\r\n", ptr->head, ptr->val);
         write(connfd, buf, size);
+        ptr = ptr->next;
     }
     char *creturn = "\r\n";
     write(connfd, creturn, strlen(creturn));
 
-    if (rsp.mode == 0) {
+    if (rsp.mode == 0 && rsp.line.code == 200) { //checks that it is a successful GET request
         int size;
         int bytes = 2048;
-        char buf[bytes];
-        while ((size = read(rsp.fd, buf, bytes)) > 0) {
-            //printf("buf: %s\n", buf);
-            write(connfd, buf, size);
+        char buf2[bytes];
+        while ((size = read(rsp.fd, buf2, bytes)) > 0) {
+            write(connfd, buf2, size);
         }
-        return;
     }
+    else {
 
-    size = (int)strlen(rsp.line.phrase) + 2;
-    char buf2[size];
-    snprintf(buf2, size, "%s\n", rsp.line.phrase);
-    write(connfd, buf2, size);
+        size = (int)strlen(rsp.line.phrase) + 2;
+        char buf3[size];
+        snprintf(buf3, size, "%s\n", rsp.line.phrase);
+        write(connfd, buf3, size);
+    }
 
         
     
@@ -102,8 +105,6 @@ void handle_connection(int connfd) {
     
     // parse the buffer for all of the request information and put it in a request struct
 
-    
-
     struct request req = parse_request_regex(r);
     
     struct response rsp = process_request(req);
@@ -113,10 +114,9 @@ void handle_connection(int connfd) {
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
 
-    delete_request(req);
-    close(rsp.fd);
     free(r);
-    //delete_response(rsp);
+    delete_request(req);
+    delete_response(rsp);
     return;
 }
 

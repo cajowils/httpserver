@@ -21,46 +21,76 @@
 #include "requests.h"
 #include "response.h"
 #include "helper.h"
+#include "list.h"
 
 
 struct response status(struct response rsp, int error_code) {
-    char message[100];
     rsp.line.code = error_code;
+    rsp.line.phrase = (char *)calloc(1, sizeof(char)*50);
     switch (error_code) {
         case 200:
-            strcpy(message, "OK");
+            strcpy(rsp.line.phrase, "OK");
             break;
         case 201:
-            strcpy(message, "Created");
+            strcpy(rsp.line.phrase, "Created");
             break;
         case 400:
-            strcpy(message, "Bad Request");
+            strcpy(rsp.line.phrase, "Bad Request");
             break;
         case 403:
-            strcpy(message, "Forbidden");
+            strcpy(rsp.line.phrase, "Forbidden");
             break;
         case 404:
-            strcpy(message, "Not Found");
+            strcpy(rsp.line.phrase, "Not Found");
             break;
         case 500:
-            strcpy(message, "Internal Server Error");
+            strcpy(rsp.line.phrase, "Internal Server Error");
             break;
         case 501:
-            strcpy(message, "Not Implemented");
+            strcpy(rsp.line.phrase, "Not Implemented");
             break;
         /*case 505:
             strcpy(message, "HTTP Version Not Supported");
             break;*/
     }
-    strncpy(rsp.line.phrase, message, (int)strlen(message));
+    Node *ptr = rsp.headers;
+    if (rsp.mode == 0 && rsp.line.code == 200) {
+        struct stat st;
+        fstat(rsp.fd, &st);
+        int head_size = (int)strlen("Content-Length");
+        int stat_size = (int)st.st_size;
+        int val_size = 1;
+        while (stat_size > 0) {
+            stat_size /= 10;
+            val_size ++;
+        }
+        ptr->next = create_node(head_size, val_size);
+        strncpy(ptr->head, "Content-Length", head_size);
+        snprintf(ptr->val, val_size, "%ld", st.st_size);
+        rsp.content_set = 1;
+        rsp.num_headers++;
+        
+    }
+    else {
 
-    if (rsp.content_set == 0) {
-        strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
-        sprintf(rsp.headers[rsp.num_headers].val, "%lu", strlen(rsp.line.phrase)+1);
+        int head_size = (int)strlen("Content-Length");
+        int phrase_size = (int)strlen(rsp.line.phrase) + 1;
+        int val_size = 1;
+        int phrase_calc = phrase_size;
+        while (phrase_calc > 0) {
+            phrase_calc /= 10;
+            val_size ++;
+        }
+        
+        ptr->next = create_node(head_size, val_size);
+        ptr = ptr->next;
+        strncpy(ptr->head, "Content-Length", head_size);
+        snprintf(ptr->val, val_size, "%d", phrase_size);
+
         rsp.num_headers++;
         rsp.content_set++;
     }
-    
+
     return rsp;
 
 }
@@ -80,19 +110,10 @@ struct response GET(struct response rsp, struct request req) {
             return status(rsp, 403); //check this code because it may not be correct
     }
     
-    rsp.mode = 0;
-    struct stat st;
-    fstat(rsp.fd, &st);
-    
-    strcpy(rsp.headers[rsp.num_headers].head, "Content-Length");
-    rsp.content_set = 1;
-    snprintf(rsp.headers[rsp.num_headers].val, 5, "%ld", st.st_size);
-    rsp.num_headers++;
     return status(rsp, 200);
 }
 
 struct response PUT(struct response rsp, struct request req) {
-    rsp.mode = 1;
     int s;
     
     errno = 0;
@@ -118,7 +139,6 @@ struct response PUT(struct response rsp, struct request req) {
     return status(rsp, s);
 }
 struct response APPEND(struct response rsp, struct request req) {
-    rsp.mode = 2;
     int s;
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
@@ -136,7 +156,7 @@ struct response APPEND(struct response rsp, struct request req) {
     int bytes = req.body_size;
 
     write(rsp.fd, req.body, bytes);
-    
+
     return status(rsp, s);
 }
 
@@ -145,23 +165,23 @@ struct response APPEND(struct response rsp, struct request req) {
 struct response process_request(struct request req) {
     struct response rsp = new_response();
     if (req.error != 0) {
-        printf("error: %d\n", req.error);
         return status(rsp, req.error);
     }
+    rsp.mode = req.mode;
 
-    if (strcmp(req.line.method, "GET")==0) {
-        rsp = GET(rsp, req);
-    }
-    else if (strcmp(req.line.method, "PUT")==0) {
-        rsp = PUT(rsp, req);
-    }
-    else if (strcmp(req.line.method, "APPEND")==0) {
-        rsp = APPEND(rsp, req);
-    }
-    else {
-        return status(rsp, 501);
+    switch (rsp.mode) {
+        case 0: {
+            return(GET(rsp, req));
+        }
+        case 1: {
+            return(PUT(rsp, req));
+        }
+        case 2: {
+            return(APPEND(rsp, req));
+        }
     }
 
+    
     //look at method and decide if it is acceptable
 
     //look at the URI and verify that it exists
@@ -172,10 +192,7 @@ struct response process_request(struct request req) {
 
     //read the body if indicated by the method
 
-    
-
-    
-    return rsp;
+    return status(rsp, 501);
     
 }
 
@@ -187,11 +204,16 @@ struct response new_response() {
     rsp.mode = -1;
     rsp.content_set = 0;
     rsp.fd = -1;
+    rsp.headers = create_node(0,0);
     return rsp;
 }
 
 void delete_response(struct response rsp) {
-    (void) rsp;
+    close(rsp.fd);
+    if (rsp.num_headers > 0) {
+        delete_list(rsp.headers);
+    }
+    free(rsp.line.phrase);
     //printf("TEST\n");
     //free(rsp.line.version);
     /*
