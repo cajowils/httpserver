@@ -8,8 +8,9 @@
 struct request parse_request_regex(char *r) {
     struct request req = new_request();
 
-    const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])";
-    const char* method_pattern = "(GET|PUT|APPEND)";
+    const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])\r\n([a-zA-Z0-9_\\.-]+: [a-zA-Z0-9_\\.:\\/\\*-]+\r\n)*\r\n";
+    //const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])\r\n(([a-zA-Z\\-_\\.]+: [a-zA-Z0-9\\-_\\.:]+\r\n)*)\r\n";
+    //const char* method_pattern = "(GET|PUT|APPEND)";
 
     regex_t re;
     if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
@@ -17,7 +18,7 @@ struct request parse_request_regex(char *r) {
         return req;
     }
 
-    int num_groups = 5;
+    int num_groups = 6;
     regmatch_t groups[num_groups];
 
     /* 
@@ -33,60 +34,139 @@ struct request parse_request_regex(char *r) {
 
     */
 
+    int headers_start;
+    int headers_end;
+
     int result = regexec(&re, r, num_groups, groups, 0);
+    regfree(&re);
     if (result == 0) {
         for (int i = 0; i < num_groups; i++) {
             if (groups[i].rm_so == -1) {
                 req.error = 400;
+                printf("TEST1\n");
                 return req;
             }
             
             switch (i) {
                 case 1: {
-                int size = groups[i].rm_eo - groups[i].rm_so;
-                strncpy(req.line.method, r + groups[i].rm_so, size);
+                    int size = groups[i].rm_eo - groups[i].rm_so;
+                    strncpy(req.line.method, r + groups[i].rm_so, size);
 
-                regex_t re_method;
-                if (regcomp(&re_method, method_pattern, REG_EXTENDED | REG_ICASE) != 0) {
-                    req.error = 500;
-                    return req;
+                    for (int s = 0; s < size; s++) {
+                        req.line.method[s] = toupper(req.line.method[s]);
+                    }
+                    
+                    if (strncmp(req.line.method, "GET", size) ==0) {
+                        req.mode = 0;
+                    }
+
+                    break;
                 }
-                if (regexec(&re_method, req.line.method, 0, NULL, 0) == REG_NOMATCH) {
-                    req.error = 501;
-                    return req;
+                case 2: {
+                    int size = groups[i].rm_eo - groups[i].rm_so;
+                    strncpy(req.line.URI, r + groups[i].rm_so, size);
+                    break;
+                }
+                case 4: {
+                    int size = groups[i].rm_eo - groups[i].rm_so;
+                    strncpy(req.line.version, r + groups[i].rm_so, size);
+
+                    headers_start = groups[i].rm_eo+2;
+
+                    if (strncmp(req.line.version, "HTTP/1.1", size) != 0) {
+                        printf("TEST2\n");
+                        req.error = 400;
+                        return req;
+                    }
+                }
+                case 5: {
+                    headers_end = groups[i].rm_eo;
                 }
 
-
-                break;
-                }
             }
-            
+            char src_copy[strlen(r)+1];
+            strcpy(src_copy, r);
+            src_copy[groups[i].rm_eo] = 0;
+            printf("Group %d: [%2u-%2u]: %s\n", i, groups[i].rm_so, groups[i].rm_eo, src_copy + groups[i].rm_so);
+
         }
-
-
-        
-        
-
-
-
     }
     else {
         req.error = 400;
         return req;
     }
+    printf("start: %d. end: %d\n", headers_start, headers_end);
+    int h_size = headers_end - headers_start;
+
+    char headers[h_size];
+    strncpy(headers, r + headers_start, h_size);
+
+    printf("headers:\n%s\n", headers);
+
+    char *h_pattern = "([a-zA-Z0-9-]+): (.*)";
+    //char *h_pattern = "(HTTP\\/1\\.1)\r\n(([a-zA-Z\\-_\\.]+: [a-zA-Z0-9\\-_\\.:\\/\\*]+\r\n)*)\r\n";
+    //char *h_pattern = "\r\n([a-zA-Z0-9_\\.-]+: [a-zA-Z0-9_\\.:\\/\\*-]+\r\n)*\r\n";
+
+    regex_t h_re;
+    if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
+            req.error = 500;
+            return req;
+        }
+    
+    int num_h_matches = 5;
+    int num_h_groups = 3;
+    regmatch_t h_groups[num_h_groups];
+
+    int total_offset = 0;
+
+    char *cursor = headers;
+
+    for (int m=0; m < num_h_matches; m++) {
+
+        
+
+        int h_result = regexec(&h_re, cursor, num_groups, h_groups, 0);
+        
+        printf("totaloffset: %d h_size: %d\n", total_offset, h_size);
+
+        if (result || total_offset >= h_size) {
+            break;
+        }
+
+        int offset = 0;
+
+        if (h_result == 0) {
+            for (int i = 0; i < num_h_groups; i++) {
+
+                if (h_groups[i].rm_so == -1) {
+                    break;
+                }
+
+                if (i==0) {
+                    offset = groups[i].rm_so;
+                }
+                char src_copy[strlen(cursor)+1];
+                strcpy(src_copy, cursor);
+                src_copy[h_groups[i].rm_eo] = 0;
+                printf("Match %u, Group %d: [%2u-%2u]: %s\n", m, i, h_groups[i].rm_so, h_groups[i].rm_eo, src_copy + h_groups[i].rm_so);
+            }
+        }
+        else {
+            printf("failing here\n");
+            req.error = 400;
+            regfree(&h_re);
+            return req;
+        }
+        cursor = headers + offset;
+        total_offset += offset;
+    }
+
+
+    regfree(&h_re);
+
 
     
-
-
-
-
-
-    regfree(&re);
     return req;
-
-
-
-
 }
 
 struct request parse_request(char *req) {

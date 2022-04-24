@@ -69,6 +69,7 @@ struct response GET(struct response rsp, struct request req) {
     //int size;
     //rsp.body = (char *) calloc(bytes, sizeof(char));
     //char *buf = (char *) calloc(bytes, sizeof(char));
+    errno = 0;
     rsp.fd = open(req.line.URI, O_RDONLY);
     switch (errno) {
         case ENOENT:
@@ -87,21 +88,14 @@ struct response GET(struct response rsp, struct request req) {
     rsp.content_set = 1;
     snprintf(rsp.headers[rsp.num_headers].val, 5, "%ld", st.st_size);
     rsp.num_headers++;
-    printf("%s\n", req.line.URI);
     return status(rsp, 200);
 }
 
 struct response PUT(struct response rsp, struct request req) {
     rsp.mode = 1;
-    uint16_t bytes;
     int s;
-    for (int i=0; i<req.num_headers; i++) {
-        if (strcmp(req.headers[i].head, "Content-Length")==0) {
-            if ((bytes = strtouint16(req.headers[i].val)) == 0) {
-                return status(rsp, 400);
-            }
-        }
-    }
+    
+    errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
     switch (errno) {
         case ENOENT:
@@ -117,9 +111,7 @@ struct response PUT(struct response rsp, struct request req) {
             return status(rsp, 403); //check this code because it may not be correct
     }
 
-    if (bytes > req.body_size) {
-        bytes = req.body_size;
-    }
+    int bytes = req.body_size;
  
     write(rsp.fd, req.body, bytes);
 
@@ -127,16 +119,8 @@ struct response PUT(struct response rsp, struct request req) {
 }
 struct response APPEND(struct response rsp, struct request req) {
     rsp.mode = 2;
-    uint16_t bytes;
     int s;
-    for (int i=0; i<req.num_headers; i++) {
-        if (strcmp(req.headers[i].head, "Content-Length")==0) {
-            if ((bytes = strtouint16(req.headers[i].val)) == 0) {
-                return status(rsp, 400);
-            }
-        }
-    }
-
+    errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
     switch (errno) {
         case 0:
@@ -149,10 +133,10 @@ struct response APPEND(struct response rsp, struct request req) {
         case EISDIR:
             return status(rsp, 403); //check this code because it may not be correct
     }
-    if (bytes > req.body_size) {
-        bytes = req.body_size;
-    }
+    int bytes = req.body_size;
+
     write(rsp.fd, req.body, bytes);
+    
     return status(rsp, s);
 }
 
@@ -161,7 +145,7 @@ struct response APPEND(struct response rsp, struct request req) {
 struct response process_request(struct request req) {
     struct response rsp = new_response();
     if (req.error != 0) {
-        printf("error\n");
+        printf("error: %d\n", req.error);
         return status(rsp, req.error);
     }
 

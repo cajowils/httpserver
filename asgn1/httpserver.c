@@ -35,7 +35,7 @@ void send_response(struct response rsp, int connfd) {
     snprintf(buf, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, buf, size);
     for (int i=0; i < rsp.num_headers; i++) {
-        printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
+        //printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
         size = (int)strlen(rsp.headers[i].head) + (int)strlen(rsp.headers[i].val) + 5;
         char buf[size];
         snprintf(buf, size, "%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
@@ -49,7 +49,7 @@ void send_response(struct response rsp, int connfd) {
         int bytes = 2048;
         char buf[bytes];
         while ((size = read(rsp.fd, buf, bytes)) > 0) {
-            printf("buf: %s\n", buf);
+            //printf("buf: %s\n", buf);
             write(connfd, buf, size);
         }
         return;
@@ -97,10 +97,14 @@ int create_listen_socket(uint16_t port) {
 
 void handle_connection(int connfd) {
     int bytes = 2048;
-    char r[bytes];
+    char *r = (char *) calloc(1, sizeof(char) * bytes);
     read(connfd, r, bytes);
-      // parse the buffer for all of the request information and put it in a request struct
-    struct request req = parse_request(r);
+    
+    // parse the buffer for all of the request information and put it in a request struct
+
+    
+
+    struct request req = parse_request_regex(r);
     
     struct response rsp = process_request(req);
 
@@ -111,6 +115,7 @@ void handle_connection(int connfd) {
 
     delete_request(req);
     close(rsp.fd);
+    free(r);
     //delete_response(rsp);
     return;
 }

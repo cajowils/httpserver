@@ -18,6 +18,7 @@ struct request {
     char *body;
     int num_headers;
     int body_size;
+    int mode;
     int error;
 };
 
