@@ -65,6 +65,7 @@ struct response status(struct response rsp, int error_code) {
             val_size ++;
         }
         ptr->next = create_node(head_size, val_size);
+        ptr = ptr->next;
         strncpy(ptr->head, "Content-Length", head_size);
         snprintf(ptr->val, val_size, "%ld", st.st_size);
         rsp.content_set = 1;
@@ -103,6 +104,7 @@ struct response GET(struct response rsp, struct request req) {
     rsp.fd = open(req.line.URI, O_RDONLY);
     switch (errno) {
         case ENOENT:
+        printf("teest\n");
             return status(rsp, 404);
         case EACCES:
             return status(rsp, 403);
