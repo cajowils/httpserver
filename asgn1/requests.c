@@ -132,6 +132,7 @@ struct request parse_request_regex(char *r) {
 
         regex_t h_re;
         if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
+                free(headers);
                 regfree(&h_re);
                 req.error = 500;
                 return req;
@@ -159,6 +160,7 @@ struct request parse_request_regex(char *r) {
             for (int i = 0; i < num_h_groups; i++) {
                 if (h_groups[i].rm_so == -1) {
                     if (i < 3) {
+                        free(headers);
                         regfree(&h_re);
                         req.error = 400;
                         return req;
@@ -183,6 +185,7 @@ struct request parse_request_regex(char *r) {
                     req.body_size = val;
                 }
                 else {
+                    free(headers);
                     regfree(&h_re);
                     req.error = 400;
                     return req;

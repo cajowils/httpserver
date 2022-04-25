@@ -30,11 +30,10 @@
 
 void send_response(struct response rsp, int connfd) {
     
-    int size;
-    size = (int)strlen(rsp.line.version) + (int)strlen(rsp.line.phrase) + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
-    char buf[2048];
-    snprintf(buf, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
-    write(connfd, buf, size);
+    int size = (int)strlen(rsp.line.version) + (int)strlen(rsp.line.phrase) + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
+    char buf0[size];
+    snprintf(buf0, size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
+    write(connfd, buf0, size);
     Node *ptr = rsp.headers->next;
     while (ptr != NULL) {
         //printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);

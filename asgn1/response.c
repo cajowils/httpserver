@@ -57,7 +57,7 @@ struct response status(struct response rsp, int error_code) {
     if (rsp.mode == 0 && rsp.line.code == 200) {
         struct stat st;
         fstat(rsp.fd, &st);
-        printf("file size: %ld\n", st.st_size);
+        //printf("file size: %ld\n", st.st_size);
         int head_size = (int)strlen("Content-Length");
         int stat_size = (int)st.st_size;
         int val_size = 2; // was 1, but Content-Length of 0 will appear as nothing unless 2 are allocated for some reason
@@ -100,7 +100,7 @@ struct response status(struct response rsp, int error_code) {
 struct response GET(struct response rsp, struct request req) {
     errno = 0;
     rsp.fd = open(req.line.URI, O_RDONLY);
-    printf("error: %d\n", errno);
+    //printf("error: %d\n", errno);
     switch (errno) {
         case ENOENT:
             return status(rsp, 404);
