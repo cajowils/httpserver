@@ -3,12 +3,11 @@
 #include <string.h>
 #include "list.h"
 
-
 Node *create_node(int head, int val) {
-    Node *n = (Node *)calloc(1, sizeof(Node));
+    Node *n = (Node *) calloc(1, sizeof(Node));
     n->next = NULL;
-    n->head = (char *)calloc(1, sizeof(char)*head);
-    n->val = (char *)calloc(1, sizeof(char)*val);
+    n->head = (char *) calloc(1, sizeof(char) * head);
+    n->val = (char *) calloc(1, sizeof(char) * val);
     return n;
 }
 
@@ -30,7 +29,6 @@ void delete_list(Node *head) {
             next = ptr->next;
             delete_node(ptr);
             ptr = next;
-        }
-        while(next != NULL);
+        } while (next != NULL);
     }
 }

@@ -19,4 +19,3 @@ int strtoint(char number[]) {
     }
     return num;
 }
-

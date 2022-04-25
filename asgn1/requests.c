@@ -11,7 +11,9 @@
 struct request parse_request_regex(char *r) {
     struct request req = new_request();
 
-    const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])\r\n(([a-zA-Z0-9_\\.-]+: [a-zA-Z0-9_\\.:\\/\\*-]+\r\n)*)\r\n";
+    const char *pattern
+        = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) "
+          "(HTTP\\/[0-9]\\.[0-9])\r\n(([a-zA-Z0-9_\\.-]+: [a-zA-Z0-9_\\.:\\/\\*-]+\r\n)*)\r\n";
     //const char* pattern = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) (HTTP\\/[0-9]\\.[0-9])\r\n(([a-zA-Z\\-_\\.]+: [a-zA-Z0-9\\-_\\.:]+\r\n)*)\r\n";
     //const char* method_pattern = "(GET|PUT|APPEND)";
 
@@ -51,71 +53,62 @@ struct request parse_request_regex(char *r) {
                 if (i < 5) {
                     req.error = 400;
                     return req;
-                }
-                else {
+                } else {
                     no_headers = 1;
                     break;
                 }
             }
 
-            
             switch (i) {
-                case 1: {
-                    int size = groups[i].rm_eo - groups[i].rm_so;
-                    req.line.method = (char *) calloc(1, sizeof(char)*size);
-                    strncpy(req.line.method, r + groups[i].rm_so, size);
+            case 1: {
+                int size = groups[i].rm_eo - groups[i].rm_so;
+                req.line.method = (char *) calloc(1, sizeof(char) * size);
+                strncpy(req.line.method, r + groups[i].rm_so, size);
 
-                    for (int s = 0; s < size; s++) {
-                        req.line.method[s] = toupper(req.line.method[s]);
-                    }
-                    
-                    if (strncmp(req.line.method, "GET", size) == 0) {
-                        req.mode = 0;
-                    }
-                    else if (strncmp(req.line.method, "PUT", size) == 0) {
-                        req.mode = 1;
-                    }
-                    else if (strncmp(req.line.method, "APPEND", size) == 0) {
-                        req.mode = 2;
-                    }
-                    else {
-                        req.error = 501;
-                        return req;
-                    }
-                    break;
-                }
-                case 2: {
-                    int size = groups[i].rm_eo - groups[i].rm_so;
-                    req.line.URI = (char *) calloc(1, sizeof(char)*size);
-                    strncpy(req.line.URI, r + groups[i].rm_so, size);
-                    break;
-                }
-                case 4: {
-                    int size = groups[i].rm_eo - groups[i].rm_so;
-                    req.line.version = (char *) calloc(1, sizeof(char)*size);
-                    strncpy(req.line.version, r + groups[i].rm_so, size);
-
-                    headers_start = groups[i].rm_eo;
-
-                    if (strncmp(req.line.version, "HTTP/1.1", size) != 0) {
-                        req.error = 400;
-                        return req;
-                    }
-                    break;
-                }
-                case 5: {
-                    headers_end = groups[i].rm_eo;
-                    //printf("headers end : %d\n", headers_end);
-                    break;
+                for (int s = 0; s < size; s++) {
+                    req.line.method[s] = toupper(req.line.method[s]);
                 }
 
+                if (strncmp(req.line.method, "GET", size) == 0) {
+                    req.mode = 0;
+                } else if (strncmp(req.line.method, "PUT", size) == 0) {
+                    req.mode = 1;
+                } else if (strncmp(req.line.method, "APPEND", size) == 0) {
+                    req.mode = 2;
+                } else {
+                    req.error = 501;
+                    return req;
+                }
+                break;
             }
-            
+            case 2: {
+                int size = groups[i].rm_eo - groups[i].rm_so;
+                req.line.URI = (char *) calloc(1, sizeof(char) * size);
+                strncpy(req.line.URI, r + groups[i].rm_so, size);
+                break;
+            }
+            case 4: {
+                int size = groups[i].rm_eo - groups[i].rm_so;
+                req.line.version = (char *) calloc(1, sizeof(char) * size);
+                strncpy(req.line.version, r + groups[i].rm_so, size);
 
+                headers_start = groups[i].rm_eo;
+
+                if (strncmp(req.line.version, "HTTP/1.1", size) != 0) {
+                    req.error = 400;
+                    return req;
+                }
+                break;
+            }
+            case 5: {
+                headers_end = groups[i].rm_eo;
+                //printf("headers end : %d\n", headers_end);
+                break;
+            }
+            }
         }
-    }
-    else {
-        
+    } else {
+
         req.error = 400;
         return req;
     }
@@ -132,25 +125,26 @@ struct request parse_request_regex(char *r) {
 
         regex_t h_re;
         if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
-                free(headers);
-                regfree(&h_re);
-                req.error = 500;
-                return req;
-            }
-        
+            free(headers);
+            regfree(&h_re);
+            req.error = 500;
+            return req;
+        }
+
         int num_h_matches = 5;
         int num_h_groups = 3;
         regmatch_t h_groups[num_h_groups];
         Node *ptr = req.headers;
         char *curr_header = headers;
 
-        for (int m=0; m < num_h_matches; m++) {
+        for (int m = 0; m < num_h_matches; m++) {
             int h_result = regexec(&h_re, curr_header, num_h_groups, h_groups, 0);
             int offset = 0;
 
-            if (h_result) {break;}
+            if (h_result) {
+                break;
+            }
             offset = h_groups[0].rm_eo;
-            
 
             for (int i = 0; i < num_h_groups; i++) {
                 if (h_groups[i].rm_so == -1) {
@@ -162,7 +156,6 @@ struct request parse_request_regex(char *r) {
                     }
                     break;
                 }
-                
             }
 
             int head_size = h_groups[1].rm_eo - h_groups[1].rm_so;
@@ -187,23 +180,20 @@ struct request parse_request_regex(char *r) {
         free(headers);
         regfree(&h_re);
     }
- 
+
     if (req.mode == 1 || req.mode == 2) {
-        if (!content_found) {  // need content-length header for PUT and APPEND requests
+        if (!content_found) { // need content-length header for PUT and APPEND requests
             req.error = 400;
             return req;
         }
 
-        
         int body_start = headers_end + 2;
 
-        req.body_read = (int)strlen(r) - body_start;
+        req.body_read = (int) strlen(r) - body_start;
 
         req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
         strncpy(req.body, r + body_start, req.body_read);
     }
-
-    
 
     return req;
 }
@@ -323,8 +313,8 @@ struct request new_request() {
     req.num_headers = 0;
     req.body_size = 0;
     req.error = 0;
-    req.headers = create_node(0,0);
-    return req;    
+    req.headers = create_node(0, 0);
+    return req;
 }
 
 void delete_request(struct request req) {

@@ -29,9 +29,10 @@
  */
 
 void send_response(struct response rsp, int connfd) {
-    
-    int line_size = (int)strlen(rsp.line.version) + (int)strlen(rsp.line.phrase) + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
-    char *line_buf = (char *)calloc(1, sizeof(char)*line_size);
+
+    int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
+                    + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
+    char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, line_buf, line_size);
     free(line_buf);
@@ -39,8 +40,8 @@ void send_response(struct response rsp, int connfd) {
     Node *ptr = rsp.headers->next;
     while (ptr != NULL) {
         //printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
-        int header_size = (int)strlen(ptr->head) + (int)strlen(ptr->val) + 5;
-        char *header_buf = (char *)calloc(1, sizeof(char)*header_size);
+        int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val) + 5;
+        char *header_buf = (char *) calloc(1, sizeof(char) * header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
         write(connfd, header_buf, header_size);
         ptr = ptr->next;
@@ -56,22 +57,17 @@ void send_response(struct response rsp, int connfd) {
         while ((size = read(rsp.fd, buf2, bytes)) > 0) {
             write(connfd, buf2, size);
         }
-    }
-    else {
+    } else {
 
-        int phrase_size = (int)strlen(rsp.line.phrase) + 2;
-        char *phrase_buf = (char *)calloc(1, sizeof(char)*phrase_size);
+        int phrase_size = (int) strlen(rsp.line.phrase) + 2;
+        char *phrase_buf = (char *) calloc(1, sizeof(char) * phrase_size);
         snprintf(phrase_buf, phrase_size, "%s\n", rsp.line.phrase);
         write(connfd, phrase_buf, phrase_size);
         free(phrase_buf);
     }
 
-        
-    
     return;
 }
-
-
 
 /**
    Creates a socket for listening for connections.
@@ -106,19 +102,19 @@ void finish_writing(struct request req, struct response rsp, int connfd) {
     int size = 0;
     char buf[bytes];
     int bytes_written;
-    if (req.body_read < req.body_size && req.body_read > (bytes/2)) {
-        
-        
-        int read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-        
+    if (req.body_read < req.body_size && req.body_read > (bytes / 2)) {
+
+        int read_bytes
+            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
 
         while ((size = read(connfd, buf, read_bytes)) > 0) {
             //printf("size: %d\n", size);
             //printf("read_bytes: %d\nbody read: %d\nbody size: %d\n", read_bytes, req.body_read, req.body_size);
-            
+
             bytes_written = write(rsp.fd, buf, size);
             req.body_read += size;
-            read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+            read_bytes
+                = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
             if (req.body_read >= req.body_size || bytes_written < bytes) {
                 break;
             }
@@ -132,11 +128,11 @@ void handle_connection(int connfd) {
     int bytes = 4096;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     read(connfd, r, bytes);
-    
+
     // parse the buffer for all of the request information and put it in a request struct
 
     struct request req = parse_request_regex(r);
-    
+
     struct response rsp = process_request(req);
     if (req.mode == 1 || req.mode == 2) {
         finish_writing(req, rsp, connfd);
@@ -153,10 +149,8 @@ void handle_connection(int connfd) {
     return;
 }
 
-
-
 int main(int argc, char *argv[]) {
-    
+
     int listenfd;
     uint16_t port;
 
@@ -172,7 +166,6 @@ int main(int argc, char *argv[]) {
 
     signal(SIGPIPE, SIG_IGN);
 
-
     while (1) {
         errno = 0;
         int connfd = accept(listenfd, NULL, NULL);
@@ -185,7 +178,6 @@ int main(int argc, char *argv[]) {
         // good code opens and closes objects in the same context. *sigh*
         close(connfd);
     }
-
 
     return EXIT_SUCCESS;
 }
