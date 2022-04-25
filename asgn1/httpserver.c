@@ -101,8 +101,36 @@ int create_listen_socket(uint16_t port) {
     return listenfd;
 }
 
+void finish_writing(struct request req, struct response rsp, int connfd) {
+    int bytes = 4096;
+    int size = 0;
+    char buf[bytes];
+    int bytes_written;
+    
+    if (req.body_read < req.body_size) {
+        
+        
+        int read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+        
+
+        while ((size = read(connfd, buf, read_bytes)) > 0) {
+            printf("size: %d\n", size);
+            printf("read_bytes: %d\nbody read: %d\nbody size: %d\n", read_bytes, req.body_read, req.body_size);
+            
+            bytes_written = write(rsp.fd, buf, size);
+            req.body_read += size;
+            read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+            if (req.body_read >= req.body_size || bytes_written < bytes) {
+                break;
+            }
+        }
+
+        printf("end write\n");
+    }
+}
+
 void handle_connection(int connfd) {
-    int bytes = 2048;
+    int bytes = 4096;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     read(connfd, r, bytes);
     
@@ -111,8 +139,13 @@ void handle_connection(int connfd) {
     struct request req = parse_request_regex(r);
     
     struct response rsp = process_request(req);
+    if (req.mode == 1 || req.mode == 2) {
+        finish_writing(req, rsp, connfd);
+    }
 
     send_response(rsp, connfd);
+
+    
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there

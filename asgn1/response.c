@@ -53,28 +53,12 @@ struct response status(struct response rsp, int error_code) {
             strcpy(message, "HTTP Version Not Supported");
             break;*/
     }
-    Node *ptr = rsp.headers;
-    if (rsp.mode == 0 && rsp.line.code == 200) {
-        struct stat st;
-        fstat(rsp.fd, &st);
-        //printf("file size: %ld\n", st.st_size);
-        int head_size = (int)strlen("Content-Length");
-        int stat_size = (int)st.st_size;
-        int val_size = 2; // was 1, but Content-Length of 0 will appear as nothing unless 2 are allocated for some reason
-        while (stat_size > 0) {
-            stat_size /= 10;
-            val_size ++;
+    
+    if (rsp.mode != 0 || rsp.line.code != 200) {
+        Node *ptr = rsp.headers;
+        while (ptr->next != NULL) {
+            ptr = ptr->next;
         }
-        ptr->next = create_node(head_size, val_size);
-        ptr = ptr->next;
-        strncpy(ptr->head, "Content-Length", head_size);
-        snprintf(ptr->val, val_size, "%d", (int)st.st_size);
-        rsp.content_set = 1;
-        rsp.num_headers++;
-        
-    }
-    else {
-
         int head_size = (int)strlen("Content-Length");
         int phrase_size = (int)strlen(rsp.line.phrase) + 1;
         int val_size = 1;
@@ -93,13 +77,21 @@ struct response status(struct response rsp, int error_code) {
         rsp.content_set++;
     }
 
+
     return rsp;
 
 }
 
 struct response GET(struct response rsp, struct request req) {
     errno = 0;
+    
     rsp.fd = open(req.line.URI, O_RDONLY);
+    struct stat st;
+    fstat(rsp.fd, &st);
+    if (S_ISDIR(st.st_mode)) {
+        //printf("testong\n");
+        errno = EISDIR;
+    }
     //printf("error: %d\n", errno);
     switch (errno) {
         case ENOENT:
@@ -109,6 +101,26 @@ struct response GET(struct response rsp, struct request req) {
         case EISDIR:
             return status(rsp, 403); //check this code because it may not be correct
     }
+
+    
+    //printf("file size: %ld\n", st.st_size);
+    int head_size = (int)strlen("Content-Length");
+    int stat_size = (int)st.st_size;
+    int val_size = 2; // was 1, but Content-Length of 0 will appear as nothing unless 2 are allocated for some reason
+    while (stat_size > 0) {
+        stat_size /= 10;
+        val_size ++;
+    }
+    Node *ptr = rsp.headers;
+    while (ptr->next != NULL) {
+        ptr = ptr->next;
+    }
+    ptr->next = create_node(head_size, val_size);
+    ptr = ptr->next;
+    strncpy(ptr->head, "Content-Length", head_size);
+    snprintf(ptr->val, val_size, "%d", (int)st.st_size);
+    rsp.content_set = 1;
+    rsp.num_headers++;
     
     return status(rsp, 200);
 }
@@ -119,12 +131,12 @@ struct response PUT(struct response rsp, struct request req) {
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
     switch (errno) {
+        case 0:
+            s = 200;
+            break;
         case ENOENT:
             rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
             s = 201;
-            break;
-        case 0:
-            s = 200;
             break;
         case EACCES:
             return status(rsp, 403);
@@ -132,9 +144,9 @@ struct response PUT(struct response rsp, struct request req) {
             return status(rsp, 403); //check this code because it may not be correct
     }
 
-    int bytes = req.body_size;
- 
-    write(rsp.fd, req.body, bytes);
+    write(rsp.fd, req.body, req.body_read);
+    
+
 
     return status(rsp, s);
 }
@@ -153,9 +165,8 @@ struct response APPEND(struct response rsp, struct request req) {
         case EISDIR:
             return status(rsp, 403); //check this code because it may not be correct
     }
-    int bytes = req.body_size;
 
-    write(rsp.fd, req.body, bytes);
+    write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, s);
 }

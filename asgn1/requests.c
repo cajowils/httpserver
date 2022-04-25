@@ -48,7 +48,7 @@ struct request parse_request_regex(char *r) {
     if (result == 0) {
         for (int i = 0; i < num_groups; i++) {
             if (groups[i].rm_so == -1) {
-                if (i != 5) {
+                if (i < 5) {
                     req.error = 400;
                     return req;
                 }
@@ -115,10 +115,10 @@ struct request parse_request_regex(char *r) {
         }
     }
     else {
+        
         req.error = 400;
         return req;
     }
-
     int content_found = 0;
 
     if (!no_headers) {
@@ -141,16 +141,11 @@ struct request parse_request_regex(char *r) {
         int num_h_matches = 5;
         int num_h_groups = 3;
         regmatch_t h_groups[num_h_groups];
-
         Node *ptr = req.headers;
-
-
         char *curr_header = headers;
 
         for (int m=0; m < num_h_matches; m++) {
-
             int h_result = regexec(&h_re, curr_header, num_h_groups, h_groups, 0);
-            
             int offset = 0;
 
             if (h_result) {break;}
@@ -178,17 +173,11 @@ struct request parse_request_regex(char *r) {
             strncpy(ptr->val, curr_header + h_groups[2].rm_so, val_size);
             req.num_headers++;
 
-            if (strcmp(ptr->head, "Content-Length") == 0) {
+            if (strcmp(ptr->head, "Content-Length") == 0 && !content_found) {
                 content_found = 1;
-                int val = strtouint16(ptr->val);
+                int val = strtoint(ptr->val);
                 if (val > 0) {
                     req.body_size = val;
-                }
-                else {
-                    free(headers);
-                    regfree(&h_re);
-                    req.error = 400;
-                    return req;
                 }
             }
 
@@ -199,10 +188,23 @@ struct request parse_request_regex(char *r) {
         regfree(&h_re);
     }
  
-    if (!content_found && (req.mode == 1 || req.mode == 2)) { // need content-length header for PUT and APPEND requests
+    if (req.mode == 1 || req.mode == 2) {
+        if (!content_found) {  // need content-length header for PUT and APPEND requests
             req.error = 400;
             return req;
         }
+
+        
+        int body_start = headers_end + 2;
+
+        req.body_read = (int)strlen(r) - body_start;
+
+        req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
+        strncpy(req.body, r + body_start, req.body_read);
+    }
+
+    
+
     return req;
 }
 /*
@@ -316,7 +318,8 @@ struct request parse_request(char *req) {
 
 struct request new_request() {
     struct request req;
-    req.body = (char *) calloc(1, sizeof(char) * 2048);
+    req.body = (char *) calloc(1, sizeof(char) * 4096);
+    req.body_read = 0;
     req.num_headers = 0;
     req.body_size = 0;
     req.error = 0;
