@@ -68,7 +68,7 @@ struct response status(struct response rsp, int error_code) {
         ptr->next = create_node(head_size, val_size);
         ptr = ptr->next;
         strncpy(ptr->head, "Content-Length", head_size);
-        snprintf(ptr->val, val_size, "%ld", st.st_size);
+        snprintf(ptr->val, val_size, "%d", (int)st.st_size);
         rsp.content_set = 1;
         rsp.num_headers++;
         
