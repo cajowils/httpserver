@@ -125,7 +125,6 @@ struct response
         break;
     }
     case ENOENT: {
-        close(rsp.fd);
         rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
         s = 201;
         errno = 0;
@@ -212,7 +211,9 @@ struct response new_response() {
 }
 
 void delete_response(struct response rsp) {
-    close(rsp.fd);
+    if (rsp.fd > 0) {
+        close(rsp.fd);
+    }
     delete_list(rsp.headers);
     free(rsp.line.phrase);
     return;
