@@ -4,9 +4,9 @@
 #include "list.h"
 
 struct request_line {
-    char method[10];
-    char URI[20];
-    char version[10];
+    char *method;
+    char *URI;
+    char *version;
 };
 
 struct request {

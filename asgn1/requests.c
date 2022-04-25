@@ -62,6 +62,7 @@ struct request parse_request_regex(char *r) {
             switch (i) {
                 case 1: {
                     int size = groups[i].rm_eo - groups[i].rm_so;
+                    req.line.method = (char *) calloc(1, sizeof(char)*size);
                     strncpy(req.line.method, r + groups[i].rm_so, size);
 
                     for (int s = 0; s < size; s++) {
@@ -85,11 +86,13 @@ struct request parse_request_regex(char *r) {
                 }
                 case 2: {
                     int size = groups[i].rm_eo - groups[i].rm_so;
+                    req.line.URI = (char *) calloc(1, sizeof(char)*size);
                     strncpy(req.line.URI, r + groups[i].rm_so, size);
                     break;
                 }
                 case 4: {
                     int size = groups[i].rm_eo - groups[i].rm_so;
+                    req.line.version = (char *) calloc(1, sizeof(char)*size);
                     strncpy(req.line.version, r + groups[i].rm_so, size);
 
                     headers_start = groups[i].rm_eo;
@@ -129,6 +132,7 @@ struct request parse_request_regex(char *r) {
 
         regex_t h_re;
         if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
+                regfree(&h_re);
                 req.error = 500;
                 return req;
             }
@@ -155,6 +159,7 @@ struct request parse_request_regex(char *r) {
             for (int i = 0; i < num_h_groups; i++) {
                 if (h_groups[i].rm_so == -1) {
                     if (i < 3) {
+                        regfree(&h_re);
                         req.error = 400;
                         return req;
                     }
@@ -178,6 +183,7 @@ struct request parse_request_regex(char *r) {
                     req.body_size = val;
                 }
                 else {
+                    regfree(&h_re);
                     req.error = 400;
                     return req;
                 }
@@ -316,9 +322,10 @@ struct request new_request() {
 }
 
 void delete_request(struct request req) {
-    if (req.num_headers > 0) {
-        delete_list(req.headers);
-    }
+    delete_list(req.headers);
     free(req.body);
+    free(req.line.method);
+    free(req.line.URI);
+    free(req.line.version);
     return;
 }

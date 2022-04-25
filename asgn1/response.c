@@ -57,9 +57,10 @@ struct response status(struct response rsp, int error_code) {
     if (rsp.mode == 0 && rsp.line.code == 200) {
         struct stat st;
         fstat(rsp.fd, &st);
+        printf("file size: %ld\n", st.st_size);
         int head_size = (int)strlen("Content-Length");
         int stat_size = (int)st.st_size;
-        int val_size = 1;
+        int val_size = 2; // was 1, but Content-Length of 0 will appear as nothing unless 2 are allocated for some reason
         while (stat_size > 0) {
             stat_size /= 10;
             val_size ++;
@@ -67,7 +68,7 @@ struct response status(struct response rsp, int error_code) {
         ptr->next = create_node(head_size, val_size);
         ptr = ptr->next;
         strncpy(ptr->head, "Content-Length", head_size);
-        snprintf(ptr->val, val_size, "%ld", st.st_size);
+        snprintf(ptr->val, val_size, "%d", (int)st.st_size);
         rsp.content_set = 1;
         rsp.num_headers++;
         
@@ -97,14 +98,11 @@ struct response status(struct response rsp, int error_code) {
 }
 
 struct response GET(struct response rsp, struct request req) {
-    //int size;
-    //rsp.body = (char *) calloc(bytes, sizeof(char));
-    //char *buf = (char *) calloc(bytes, sizeof(char));
     errno = 0;
     rsp.fd = open(req.line.URI, O_RDONLY);
+    printf("error: %d\n", errno);
     switch (errno) {
         case ENOENT:
-        printf("teest\n");
             return status(rsp, 404);
         case EACCES:
             return status(rsp, 403);
@@ -212,16 +210,7 @@ struct response new_response() {
 
 void delete_response(struct response rsp) {
     close(rsp.fd);
-    if (rsp.num_headers > 0) {
-        delete_list(rsp.headers);
-    }
+    delete_list(rsp.headers);
     free(rsp.line.phrase);
-    //printf("TEST\n");
-    //free(rsp.line.version);
-    /*
-    for (int h = 0; h < req.num_headers; h++) {
-        free(req.headers[h].head);
-    }
-    */
     return;
 }
