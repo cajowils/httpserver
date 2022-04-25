@@ -18,5 +18,5 @@ clean:
 infer:
 				make clean; infer-capture -- make; infer-analyze -- make
 format:
-				clang-format *.c *.h
+				clang-format -style=file *.c *.h
 all:			httpserver
