@@ -114,8 +114,8 @@ void finish_writing(struct request req, struct response rsp, int connfd) {
         
 
         while ((size = read(connfd, buf, read_bytes)) > 0) {
-            printf("size: %d\n", size);
-            printf("read_bytes: %d\nbody read: %d\nbody size: %d\n", read_bytes, req.body_read, req.body_size);
+            //printf("size: %d\n", size);
+            //printf("read_bytes: %d\nbody read: %d\nbody size: %d\n", read_bytes, req.body_read, req.body_size);
             
             bytes_written = write(rsp.fd, buf, size);
             req.body_read += size;
@@ -125,7 +125,7 @@ void finish_writing(struct request req, struct response rsp, int connfd) {
             }
         }
 
-        printf("end write\n");
+        //printf("end write\n");
     }
 }
 
@@ -144,8 +144,6 @@ void handle_connection(int connfd) {
     }
 
     send_response(rsp, connfd);
-
-    
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
