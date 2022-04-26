@@ -97,21 +97,19 @@ int create_listen_socket(uint16_t port) {
     return listenfd;
 }
 
-
 void finish_writing(struct request req, struct response rsp, int fd) {
     int bytes = 4096;
-    int size;
+    int size = 0;
     char buf[bytes];
-    int bytes_written;
+    int bytes_written = 0;
 
-    struct stat st;
-    fstat(fd, &st);
-    //printf("bytes left to read: %d\n", (int)st.st_size);
+    int read_bytes
+        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    printf("testing here\n");
 
-    if (req.body_read < req.body_size && st.st_size > 0) {
+    /*if (req.body_read < req.body_size && st.st_size > 0) {
 
-        int read_bytes
-            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+        
 
         while ((size = read(fd, buf, read_bytes)) > 0) {
             //printf("size: %d\n", size);
@@ -125,62 +123,67 @@ void finish_writing(struct request req, struct response rsp, int fd) {
                 break;
             }
         }
-    }
+    }*/
+
+    do {
+        size = read(fd, buf, read_bytes);
+        bytes_written = write(rsp.fd, buf, size);
+        req.body_read += size;
+        read_bytes
+            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    } while (size > 0 && bytes_written >= bytes);
+    printf("after write\n");
 
     return;
-
-
 }
 
-void read_all(int connfd) {
+int read_all(int connfd) {
     int curr_read = 0;
     //int max_bytes = 1000000;
     int bytes_written = 0;
-    int size = -1;
+    int size = 0;
     int bytes = 2048;
     char buf[bytes];
-    int fd = open("read_data", O_WRONLY | O_CREAT | O_TRUNC);
+    int fd = open("read_data", O_RDWR | O_CREAT | O_TRUNC);
+    printf("fd open: %d\n", fd);
 
     do {
         size = read(connfd, buf, bytes);
         bytes_written = write(fd, buf, size);
         curr_read += bytes;
-        //printf("byteswritten: %d\n", bytes_written);
-    }
-    while (size > 0 && bytes_written >= bytes);
-    close(fd);
-    return;
+        printf("byteswritten: %d\n", bytes_written);
+    } while (size > 0 && bytes_written >= bytes);
+    //close(fd);
+    printf("%d\n", size);
+    return fd;
 }
 
 void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
-    read_all(connfd);
-    int fd = open("read_data", O_RDONLY);
-    read(fd, r, bytes);
+    read(connfd, r, bytes);
 
     // parse the buffer for all of the request information and put it in a request struct
 
     struct request req = parse_request_regex(r);
 
     struct response rsp = process_request(req);
-    if ((rsp.line.code == 200 || rsp.line.code == 201 ) && (req.mode == 1 || req.mode == 2)) {
-        finish_writing(req, rsp, fd);
+    if ((rsp.line.code == 200 || rsp.line.code == 201) && (req.mode == 1 || req.mode == 2)) {
+        finish_writing(req, rsp, connfd);
     }
-    close(fd);
 
     send_response(rsp, connfd);
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
     //printf("code: %d\n", rsp.line.code);
-    //printf("Before frees\n");
+    printf("Before frees\n");
     free(r);
-    //printf("buffer freed\n");
+    printf("buffer freed\n");
     delete_request(req);
-    //printf("request deleted\n");
+    printf("request deleted\n");
     delete_response(rsp);
-    //printf("response deleted\n");
+    printf("response deleted\n");
     return;
 }
 

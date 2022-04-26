@@ -1,2 +1,0 @@
-GET /tests/bible.txt HTTP/1.1
-

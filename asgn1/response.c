@@ -74,11 +74,13 @@ struct response GET(struct response rsp, struct request req) {
     struct stat st;
     fstat(rsp.fd, &st);
     if (S_ISDIR(st.st_mode)) {
-        //printf("testong\n");
         errno = EISDIR;
     }
-    //printf("error: %d\n", errno);
+
     switch (errno) {
+    case 0: {
+        break;
+    }
     case ENOENT: {
         return status(rsp, 404);
     }
@@ -87,6 +89,12 @@ struct response GET(struct response rsp, struct request req) {
     }
     case EISDIR: {
         return status(rsp, 403); //check this code because it may not be correct
+    }
+    case EBADF: {
+        return status(rsp, 404);
+    }
+    default: {
+        return status(rsp, 404);
     }
     }
 
@@ -118,16 +126,24 @@ struct response
     int s;
 
     errno = 0;
-    rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
-    switch (errno) {
-    case 0: {
+
+    if (access(req.line.URI, F_OK) == 0) {
+        rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
         s = 200;
-        break;
-    }
-    case ENOENT: {
+    } else {
         rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
         s = 201;
         errno = 0;
+    }
+
+    struct stat st;
+    fstat(rsp.fd, &st);
+    if (S_ISDIR(st.st_mode)) {
+        errno = EISDIR;
+    }
+
+    switch (errno) {
+    case 0: {
         break;
     }
     case EACCES: {
@@ -136,18 +152,30 @@ struct response
     case EISDIR: {
         return status(rsp, 403); //check this code because it may not be correct
     }
+    default: {
+        return status(rsp, 403);
+        warn("PUT error");
+    }
     }
 
     write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, s);
-} struct response APPEND(struct response rsp, struct request req) {
-    int s;
+}
+
+struct response
+    APPEND(struct response rsp, struct request req) {
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
+    warn("APPEND open error");
+    printf("errno: %d\n", errno);
+    struct stat st;
+    fstat(rsp.fd, &st);
+    if (rsp.fd > 0 && S_ISDIR(st.st_mode)) {
+        errno = EISDIR;
+    }
     switch (errno) {
     case 0: {
-        s = 200;
         break;
     }
     case ENOENT: {
@@ -159,11 +187,14 @@ struct response
     case EISDIR: {
         return status(rsp, 403); //check this code because it may not be correct
     }
+    default: {
+        return status(rsp, 404);
+    }
     }
 
     write(rsp.fd, req.body, req.body_read);
 
-    return status(rsp, s);
+    return status(rsp, 200);
 }
 
 struct response
@@ -205,7 +236,7 @@ struct response new_response() {
     rsp.num_headers = 0;
     rsp.mode = -1;
     rsp.content_set = 0;
-    rsp.fd = -1;
+    rsp.fd = -2;
     rsp.headers = create_node(0, 0);
     return rsp;
 }

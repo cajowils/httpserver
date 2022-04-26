@@ -82,19 +82,19 @@ struct request parse_request_regex(char *r) {
                 break;
             }
             case 2: {
-                int size = groups[i].rm_eo - groups[i].rm_so;
-                req.line.URI = (char *) calloc(1, sizeof(char) * size);
-                strncpy(req.line.URI, r + groups[i].rm_so, size);
+                int uri_size = groups[i].rm_eo - groups[i].rm_so;
+                req.line.URI = (char *) calloc(1, sizeof(char) * uri_size);
+                strncpy(req.line.URI, r + groups[i].rm_so, uri_size);
                 break;
             }
             case 4: {
-                int size = groups[i].rm_eo - groups[i].rm_so;
-                req.line.version = (char *) calloc(1, sizeof(char) * size);
-                strncpy(req.line.version, r + groups[i].rm_so, size);
+                int version_size = groups[i].rm_eo - groups[i].rm_so;
+                req.line.version = (char *) calloc(1, sizeof(char) * version_size);
+                strncpy(req.line.version, r + groups[i].rm_so, version_size);
 
                 headers_start = groups[i].rm_eo;
 
-                if (strncmp(req.line.version, "HTTP/1.1", size) != 0) {
+                if (strncmp(req.line.version, "HTTP/1.1", version_size) != 0) {
                     req.error = 400;
                     return req;
                 }
@@ -318,10 +318,15 @@ struct request new_request() {
 }
 
 void delete_request(struct request req) {
+    printf("test1\n");
     delete_list(req.headers);
+    printf("test2\n");
     free(req.body);
+    printf("test3\n");
     free(req.line.method);
+    printf("test4\n");
     free(req.line.URI);
+    printf("test5\n");
     free(req.line.version);
     return;
 }
