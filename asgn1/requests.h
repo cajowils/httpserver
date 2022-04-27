@@ -20,7 +20,7 @@ struct request {
     int error;
 };
 
-struct request parse_request_regex(char *r);
+struct request parse_request_regex(char *r, int size);
 
 struct request parse_request(char *req);
 

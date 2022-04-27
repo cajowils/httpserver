@@ -154,7 +154,7 @@ struct response
     }
     default: {
         return status(rsp, 403);
-        warn("PUT error");
+        warnx("PUT error");
     }
     }
 
@@ -165,10 +165,10 @@ struct response
 
 struct response
     APPEND(struct response rsp, struct request req) {
+        
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
-    warn("APPEND open error");
-    printf("errno: %d\n", errno);
+    warnx("APPEND open error");
     struct stat st;
     fstat(rsp.fd, &st);
     if (rsp.fd > 0 && S_ISDIR(st.st_mode)) {

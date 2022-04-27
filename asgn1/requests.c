@@ -8,8 +8,13 @@
 #include "helper.h"
 #include "list.h"
 
-struct request parse_request_regex(char *r) {
+struct request parse_request_regex(char *r, int size) {
     struct request req = new_request();
+    
+    if (size < 1) {
+        req.error = 400;
+        return req;
+    }
 
     const char *pattern
         = "^([a-zA-Z]+) \\/((\\/?[A-Za-z0-9_\\-\\.]+)+) "
@@ -318,15 +323,15 @@ struct request new_request() {
 }
 
 void delete_request(struct request req) {
-    printf("test1\n");
+    //printf("test1\n");
     delete_list(req.headers);
-    printf("test2\n");
+    //printf("test2\n");
     free(req.body);
-    printf("test3\n");
+    //printf("test3\n");
     free(req.line.method);
-    printf("test4\n");
+    //printf("test4\n");
     free(req.line.URI);
-    printf("test5\n");
+    //printf("test5\n");
     free(req.line.version);
     return;
 }

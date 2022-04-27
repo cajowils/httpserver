@@ -105,7 +105,7 @@ void finish_writing(struct request req, struct response rsp, int fd) {
 
     int read_bytes
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    printf("testing here\n");
+    //printf("testing here\n");
 
     /*if (req.body_read < req.body_size && st.st_size > 0) {
 
@@ -132,7 +132,7 @@ void finish_writing(struct request req, struct response rsp, int fd) {
         read_bytes
             = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     } while (size > 0 && bytes_written >= bytes);
-    printf("after write\n");
+    //printf("after write\n");
 
     return;
 }
@@ -145,27 +145,27 @@ int read_all(int connfd) {
     int bytes = 2048;
     char buf[bytes];
     int fd = open("read_data", O_RDWR | O_CREAT | O_TRUNC);
-    printf("fd open: %d\n", fd);
+    //printf("fd open: %d\n", fd);
 
     do {
         size = read(connfd, buf, bytes);
         bytes_written = write(fd, buf, size);
         curr_read += bytes;
-        printf("byteswritten: %d\n", bytes_written);
+        //printf("byteswritten: %d\n", bytes_written);
     } while (size > 0 && bytes_written >= bytes);
     //close(fd);
-    printf("%d\n", size);
+    //printf("%d\n", size);
     return fd;
 }
 
 void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
-    read(connfd, r, bytes);
+    int size = read(connfd, r, bytes);
 
     // parse the buffer for all of the request information and put it in a request struct
 
-    struct request req = parse_request_regex(r);
+    struct request req = parse_request_regex(r, size);
 
     struct response rsp = process_request(req);
     if ((rsp.line.code == 200 || rsp.line.code == 201) && (req.mode == 1 || req.mode == 2)) {
@@ -177,13 +177,13 @@ void handle_connection(int connfd) {
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
     //printf("code: %d\n", rsp.line.code);
-    printf("Before frees\n");
+    //printf("Before frees\n");
     free(r);
-    printf("buffer freed\n");
+    //printf("buffer freed\n");
     delete_request(req);
-    printf("request deleted\n");
+    //printf("request deleted\n");
     delete_response(rsp);
-    printf("response deleted\n");
+    //printf("response deleted\n");
     return;
 }
 
