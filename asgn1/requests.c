@@ -49,12 +49,15 @@ struct request parse_request_regex(char *r, int size) {
     int headers_start;
     int headers_end;
     int no_headers = 0;
+    int body_start;
 
     int result = regexec(&re, r, num_groups, groups, 0);
     regfree(&re);
     if (result == 0) {
         for (int i = 0; i < num_groups; i++) {
             if (groups[i].rm_so == -1) {
+                printf("i: %d\n", i);
+                num_groups = i;
                 if (i < 5) {
                     req.error = 400;
                     return req;
@@ -63,62 +66,63 @@ struct request parse_request_regex(char *r, int size) {
                     break;
                 }
             }
-
-            switch (i) {
-            case 1: {
-                int size = groups[i].rm_eo - groups[i].rm_so;
-                req.line.method = (char *) calloc(1, sizeof(char) * size);
-                strncpy(req.line.method, r + groups[i].rm_so, size);
-
-                for (int s = 0; s < size; s++) {
-                    req.line.method[s] = toupper(req.line.method[s]);
-                }
-
-                if (strncmp(req.line.method, "GET", size) == 0) {
-                    req.mode = 0;
-                } else if (strncmp(req.line.method, "PUT", size) == 0) {
-                    req.mode = 1;
-                } else if (strncmp(req.line.method, "APPEND", size) == 0) {
-                    req.mode = 2;
-                } else {
-                    req.error = 501;
-                    return req;
-                }
-                break;
-            }
-            case 2: {
-                int uri_size = groups[i].rm_eo - groups[i].rm_so;
-                req.line.URI = (char *) calloc(1, sizeof(char) * uri_size);
-                strncpy(req.line.URI, r + groups[i].rm_so, uri_size);
-                break;
-            }
-            case 4: {
-                int version_size = groups[i].rm_eo - groups[i].rm_so;
-                req.line.version = (char *) calloc(1, sizeof(char) * version_size);
-                strncpy(req.line.version, r + groups[i].rm_so, version_size);
-
-                headers_start = groups[i].rm_eo;
-
-                if (strncmp(req.line.version, "HTTP/1.1", version_size) != 0) {
-                    req.error = 400;
-                    return req;
-                }
-                break;
-            }
-            case 5: {
-                headers_end = groups[i].rm_eo;
-                //printf("headers end : %d\n", headers_end);
-                break;
-            }
-            }
         }
+
+        // Getting the index of the body
+
+        body_start = groups[0].rm_eo;
+
+        // Getting Method
+        int size = groups[1].rm_eo - groups[1].rm_so;
+        req.line.method = (char *) realloc(req.line.method, sizeof(char) * size);
+        strncpy(req.line.method, r + groups[1].rm_so, size);
+
+        for (int s = 0; s < size; s++) {
+            req.line.method[s] = toupper(req.line.method[s]);
+        }
+
+        if (strncmp(req.line.method, "GET", size) == 0) {
+            req.mode = 0;
+        } else if (strncmp(req.line.method, "PUT", size) == 0) {
+            req.mode = 1;
+        } else if (strncmp(req.line.method, "APPEND", size) == 0) {
+            req.mode = 2;
+        } else {
+            req.error = 501;
+            return req;
+        }
+        //printf("Method:\t>%s<\n", req.line.method);
+
+        //Getting URI
+        int uri_size = groups[2].rm_eo - groups[2].rm_so;
+        req.line.URI = (char *) realloc(req.line.URI, sizeof(char) * uri_size);
+        strncpy(req.line.URI, r + groups[2].rm_so, uri_size);
+        //printf("URI:\t>%s<\n", req.line.URI);
+        
+
+        //Gettng HTTP Version
+        int version_size = groups[4].rm_eo - groups[4].rm_so;
+        req.line.version = (char *) realloc(req.line.version, sizeof(char) * version_size);
+        strncpy(req.line.version, r + groups[4].rm_so, version_size);
+        headers_start = groups[4].rm_eo;
+        //printf("Ver:\t>%s<\n", req.line.version);
+
+        if (strncmp(req.line.version, "HTTP/1.1", version_size) != 0) {
+            req.error = 400;
+            return req;
+        }
+        
+        //Getting the end of the headers
+        if (num_groups > 4) {
+            headers_end = groups[5].rm_eo;
+        }
+
     } else {
 
         req.error = 400;
         return req;
     }
     int content_found = 0;
-
     if (!no_headers) {
         int h_size = headers_end - headers_start;
         char *headers = (char *) calloc(1, sizeof(char) * h_size);
@@ -185,16 +189,13 @@ struct request parse_request_regex(char *r, int size) {
         free(headers);
         regfree(&h_re);
     }
-
     if (req.mode == 1 || req.mode == 2) {
         if (!content_found) { // need content-length header for PUT and APPEND requests
             req.error = 400;
             return req;
         }
 
-        int body_start = headers_end + 2;
-
-        req.body_read = (int) strlen(r) - body_start;
+        req.body_read = size - body_start;
 
         req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
         strncpy(req.body, r + body_start, req.body_read);
@@ -313,6 +314,9 @@ struct request parse_request(char *req) {
 
 struct request new_request() {
     struct request req;
+    req.line.method = (char *) calloc(1, sizeof(char));
+    req.line.URI = (char *) calloc(1, sizeof(char));
+    req.line.version = (char *) calloc(1, sizeof(char));
     req.body = (char *) calloc(1, sizeof(char) * 4096);
     req.body_read = 0;
     req.num_headers = 0;
@@ -323,15 +327,10 @@ struct request new_request() {
 }
 
 void delete_request(struct request req) {
-    //printf("test1\n");
     delete_list(req.headers);
-    //printf("test2\n");
     free(req.body);
-    //printf("test3\n");
     free(req.line.method);
-    //printf("test4\n");
     free(req.line.URI);
-    //printf("test5\n");
     free(req.line.version);
     return;
 }

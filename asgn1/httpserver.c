@@ -137,42 +137,42 @@ void finish_writing(struct request req, struct response rsp, int fd) {
     return;
 }
 
-int read_all(int connfd) {
-    int curr_read = 0;
-    //int max_bytes = 1000000;
-    int bytes_written = 0;
-    int size = 0;
-    int bytes = 2048;
-    char buf[bytes];
-    int fd = open("read_data", O_RDWR | O_CREAT | O_TRUNC);
-    //printf("fd open: %d\n", fd);
-
+int read_all(int fd, char *buf, int nbytes) {
+    int total = 0;
+    int bytes = 0;
+    //printf("before read\n");
     do {
-        size = read(connfd, buf, bytes);
-        bytes_written = write(fd, buf, size);
-        curr_read += bytes;
-        //printf("byteswritten: %d\n", bytes_written);
-    } while (size > 0 && bytes_written >= bytes);
-    //close(fd);
-    //printf("%d\n", size);
-    return fd;
+        bytes = read(fd, buf+total, nbytes-total);
+        total+=bytes;
+        //printf("read\n");
+    } while (bytes > 0 && total < nbytes);
+    //printf("done reading\n");
+    return total;
 }
 
 void handle_connection(int connfd) {
+    //printf("handling connection\n");
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
-    int size = read(connfd, r, bytes);
+    //int size = read(connfd, r, bytes);
+    //printf("reading all\n");
+    int size = read_all(connfd, r, bytes);
+    //printf("r:\n%s\n", r);
 
     // parse the buffer for all of the request information and put it in a request struct
-
+    //printf("parsing request\n");
     struct request req = parse_request_regex(r, size);
+    //printf("processing response\n");
 
     struct response rsp = process_request(req);
+    //printf("finish writing\n");
     if ((rsp.line.code == 200 || rsp.line.code == 201) && (req.mode == 1 || req.mode == 2)) {
         finish_writing(req, rsp, connfd);
     }
+    //printf("sending response\n");
 
     send_response(rsp, connfd);
+    //printf("code: %d\n", rsp.line.code);
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there

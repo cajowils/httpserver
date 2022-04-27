@@ -236,13 +236,13 @@ struct response new_response() {
     rsp.num_headers = 0;
     rsp.mode = -1;
     rsp.content_set = 0;
-    rsp.fd = -2;
+    rsp.fd = -1;
     rsp.headers = create_node(0, 0);
     return rsp;
 }
 
 void delete_response(struct response rsp) {
-    if (rsp.fd > 0) {
+    if (rsp.fd != -1) {
         close(rsp.fd);
     }
     delete_list(rsp.headers);
