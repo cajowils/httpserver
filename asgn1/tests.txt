@@ -1,0 +1,196 @@
+Request Validity Tests:
+
+Valid Method:
+
+TEST1 "get /files/foo.txt HTTP/1.1\r\n\r\n"
+
+TEST2 "append /files/append_to.txt HTTP/1.1\r\nContent-Length: 20\r\n\r\nThis is the end"
+
+Invalid Method:
+
+TEST3 "aPpEnD /files/append_to.txt HTTP/1.1\r\nContent-Length: 20\r\n\r\nThis is the end"
+
+TEST4 "Put /files/put_to HTTP/1.1\r\nContent-Length: 11\r\n\r\nHello World"
+
+TEST5 "GETTING /files/foo.txt HTTP/1.1\r\n\r\n"
+
+TEST6 "AASDJAOWUOAWUDOAWBDOA /files/foo.txt /HTTP/1.1\r\nContent-Length: 100\r\n\r\nThis is the test to verify that AASDJAOWUOAWUDOAWBDOA is not a valid method"
+
+TEST7 "APPEND2 /files/foo.txt HTTP/1.1\r\nContent-Length: 25\r\n\r\nThis test should not work"
+
+Invalid URI:
+
+"GET /files/ HTTP/1.1\r\n\r\n"
+
+"GET /files/fo:o.txt HTTP/1.1\r\n\r\n"
+
+"APPEND files/foo.txt HTTP/1.1\r\nContent-Length: 6\r\n\r\nBroken"
+
+Invalid Version:
+
+"GET /files/ HTTP/0.9\r\n\r\n"
+
+"GET /files/ HTTP1.1\r\n\r\n"
+
+"GET /files/ HTTPS/1.1\r\n\r\n"
+
+Incomplete Request:
+
+"GET /files/foo.txt HTTP/1.1"
+
+"GET/files/foo.txt HTTP/1.1\r\n\r\n"
+
+"GET /files/foo.txtHTTP/1.1\r\n\r\n"
+
+"APPEND/files/foo.txtHTTP/1.1\r\nContent-Length: 11\r\n This Breaks"
+
+500 Errors:
+
+Write to /dev/full
+
+Cause a read error
+
+
+GET Request Tests:
+
+Long Requests:
+
+TEST9 "GET /files/long.txt HTTP/1.1\r\n\r\n"
+
+"GET /files/longbinary HTTP/1.1\r\n\r\n"
+
+Short Requests:
+
+"GET /files/short.txt HTTP/1.1\r\nContent-Length: 11\r\n\r\nDon’tMatter"
+
+"GET /file/shortbinary HTTP/1.1\r\n\r\n"
+
+
+Nonexistent Files:
+
+"GET /files/nothere.txt HTTP/1.1\r\n\r\n"
+
+"GET /files/nothereeither.txt HTTP/1.1\r\nTest-Header: Testing\r\n\r\nBody Doesn’t Matter"
+
+Empty Request:
+
+"GET /files/empty.txt HTTP/1.1\r\n\r\n"
+
+Directory/No Permissions:
+
+"GET /files HTTP/1.1\r\n\r\n"
+
+"GET /files/locked.txt HTTP/1.1\r\n\r\n"
+
+
+PUT Request Tests:
+
+
+Long Requests:
+
+"PUT /files/long_put.txt HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG FILE HERE}"
+
+PUT /files/long_put_binary HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG BINARY HERE}"
+
+Create files:
+
+"PUT /files/create_long_put.txt HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG FILE HERE}"
+
+PUT /files/create_long_put_binary HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG BINARY HERE}"
+
+
+Short Requests:
+
+"PUT /files/short_put.txt HTTP/1.1\r\nContent-Length: 11\r\n\r\nShort Put"
+
+"PUT /file/short_put_binary HTTP/1.1\r\nContent-Length: 100\r\n\r\n{SHORT BINARY HERE}"
+
+Create files:
+
+"PUT /files/create_short_put.txt HTTP/1.1\r\nContent-Length: 11\r\n\r\nShort Put"
+
+"PUT /file/create_short_put_binary HTTP/1.1\r\nContent-Length: 100\r\n\r\n{SHORT BINARY HERE}"
+
+Empty Request:
+
+"PUT /files/empty_put.txt HTTP/1.1\r\nContent-Length: 0\r\n\r\n"
+
+"PUT /files/empty_put2.txt HTTP/1.1\r\nContent-Length: 110\r\n\r\n"
+
+Directory/No Permissions:
+
+"PUT /files/directory HTTP/1.1\r\nContent-Length: 100\r\n\r\nCannot PUT to a directory"
+
+"PUT /files/locked.txt HTTP/1.1\r\nContent-Length: 100\r\n\r\nCannot PUT to a locked file"
+
+Invalid Header Fields:
+
+Missing Content Length:
+
+"PUT /files/foo.txt HTTP/1.1\r\nTest-Header: Test-Response\r\n\r\nCannot PUT without Content-Length"
+
+Invalid Content Length:
+
+"PUT /files/foo.txt HTTP/1.1\r\nContent-Length: 100abc\r\n\r\nCannot PUT a bad Content-Length"
+
+"PUT /files/foo.txt HTTP/1.1\r\nContent-Length: ABC\r\n\r\nCannot PUT a bad Content-Length"
+
+Multiple Content Length:
+
+"PUT /files/multiple_content_length.txt HTTP/1.1\r\nContent-Length: 100\r\nContent-Length: 5\r\nMessage should be thiiiiiiiiiiiiiissss long"
+
+
+
+APPEND Request Tests:
+
+
+Long Requests:
+
+"APPEND /files/long_append.txt HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG FILE HERE}"
+
+"APPEND /files/long_append_binary HTTP/1.1\r\nContent-Length: 10000\r\n\r\n{LONG BINARY HERE}"
+
+Short Requests:
+
+"APPEND /files/short_append.txt HTTP/1.1\r\nContent-Length: 11\r\n\r\nShort Append"
+
+"APPEND /file/short_append_binary HTTP/1.1\r\nContent-Length: 100\r\n\r\n{SHORT BINARY HERE}"
+
+Nonexistent File:
+
+"APPEND /files/nothere.txt HTTP/1.1\r\nContent-Length: 11\r\n\r\nShort Append"
+
+Empty Request:
+
+"APPEND /files/empty_append.txt HTTP/1.1\r\nContent-Length: 0\r\n\r\n"
+
+"APPEND /files/empty_append2.txt HTTP/1.1\r\nContent-Length: 110\r\n\r\n"
+
+Directory/No Permissions:
+
+"APPEND /files/directory HTTP/1.1\r\nContent-Length: 100\r\n\r\nCannot APPEND to a directory"
+
+"APPEND /files/locked.txt HTTP/1.1\r\nContent-Length: 100\r\n\r\nCannot APPEND to a locked file"
+
+Invalid Header Fields:
+
+Missing Content Length:
+
+"APPEND /files/foo.txt HTTP/1.1\r\nTest-Header: Test-Response\r\n\r\nCannot APPEND without Content-Length"
+
+Invalid Content Length:
+
+"APPEND /files/foo.txt HTTP/1.1\r\nContent-Length: bas3ed_tes-t\r\n\r\nCannot APPEND a bad Content-Length"
+
+"APPEND /files/foo.txt HTTP/1.1\r\nContent-Length: t-.f3\r\n\r\nCannot APPEND a bad Content-Length"
+
+Multiple Content Length:
+
+"APPEND /files/multiple_content_length.txt HTTP/1.1\r\nContent-Length: 100\r\nContent-Length: 5\r\nMessage should be thiiiiiiiiiiiiiissss long"
+
+
+
+
+
+
+

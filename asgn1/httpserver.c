@@ -151,13 +151,12 @@ int read_all(int fd, char *buf, int nbytes) {
 }
 
 void handle_connection(int connfd) {
-    //printf("handling connection\n");
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     //int size = read(connfd, r, bytes);
     //printf("reading all\n");
     int size = read_all(connfd, r, bytes);
-    //printf("r:\n%s\n", r);
+    printf("request:\n%s\n", r);
 
     // parse the buffer for all of the request information and put it in a request struct
     //printf("parsing request\n");
@@ -172,11 +171,10 @@ void handle_connection(int connfd) {
     //printf("sending response\n");
 
     send_response(rsp, connfd);
-    //printf("code: %d\n", rsp.line.code);
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
-    //printf("code: %d\n", rsp.line.code);
+    printf("code: %d\n", rsp.line.code);
     //printf("Before frees\n");
     free(r);
     //printf("buffer freed\n");
