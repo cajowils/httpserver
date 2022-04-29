@@ -20,5 +20,5 @@ infer:
 format:			
 				clang-format -i -style=file *.[ch]
 test:
-				./test.sh
+				./scripts/test.sh
 all:			httpserver

@@ -31,10 +31,10 @@
 void send_response(struct response rsp, int connfd) {
 
     int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
-                    + 8; //need 3 for the status code, 2 for epaces and 2 for the carriage return
+                    + 8; //need 3 for the status code, 2 for spaces and 2 for the carriage return
     char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
-    write(connfd, line_buf, line_size);
+    write(connfd, line_buf, line_size-1);
     free(line_buf);
 
     Node *ptr = rsp.headers->next;
@@ -43,7 +43,7 @@ void send_response(struct response rsp, int connfd) {
         int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val) + 5;
         char *header_buf = (char *) calloc(1, sizeof(char) * header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
-        write(connfd, header_buf, header_size);
+        write(connfd, header_buf, header_size-1);
         ptr = ptr->next;
         free(header_buf);
     }
@@ -62,7 +62,7 @@ void send_response(struct response rsp, int connfd) {
         int phrase_size = (int) strlen(rsp.line.phrase) + 2;
         char *phrase_buf = (char *) calloc(1, sizeof(char) * phrase_size);
         snprintf(phrase_buf, phrase_size, "%s\n", rsp.line.phrase);
-        write(connfd, phrase_buf, phrase_size);
+        write(connfd, phrase_buf, phrase_size-1);
         free(phrase_buf);
     }
 
