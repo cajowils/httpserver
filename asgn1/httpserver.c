@@ -140,13 +140,23 @@ void finish_writing(struct request req, struct response rsp, int fd) {
 int read_all(int fd, char *buf, int nbytes) {
     int total = 0;
     int bytes = 0;
+    const char *pattern = "\r\n\r\n";
+    regex_t re;
+    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
+        bytes = 0;
+        //return 500
+    }
+
+
     //printf("before read\n");
     do {
         bytes = read(fd, buf+total, nbytes-total);
         total+=bytes;
+        
         //printf("read\n");
-    } while (bytes > 0 && total < nbytes);
+    } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     //printf("done reading\n");
+    regfree(&re);
     return total;
 }
 
@@ -156,7 +166,7 @@ void handle_connection(int connfd) {
     //int size = read(connfd, r, bytes);
     //printf("reading all\n");
     int size = read_all(connfd, r, bytes);
-    printf("request:\n%s\n", r);
+    //printf("request:\n%s\n", r);
 
     // parse the buffer for all of the request information and put it in a request struct
     //printf("parsing request\n");
@@ -174,7 +184,7 @@ void handle_connection(int connfd) {
 
     // check for errors in the request (wrong version, format, etc) and issue appropriate status
     // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
-    printf("code: %d\n", rsp.line.code);
+    //printf("code: %d\n", rsp.line.code);
     //printf("Before frees\n");
     free(r);
     //printf("buffer freed\n");
