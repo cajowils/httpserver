@@ -131,7 +131,7 @@ void finish_writing(struct request req, struct response rsp, int fd) {
         req.body_read += size;
         read_bytes
             = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    } while (size > 0 && bytes_written >= bytes);
+    } while (size > 0); //&& bytes_written >= bytes);
     //printf("after write\n");
 
     return;
