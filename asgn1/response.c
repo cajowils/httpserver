@@ -88,7 +88,7 @@ struct response GET(struct response rsp, struct request req) {
         return status(rsp, 403);
     }
     case EISDIR: {
-        return status(rsp, 403); //check this code because it may not be correct
+        return status(rsp, 403);
     }
     case EBADF: {
         return status(rsp, 404);
@@ -149,7 +149,7 @@ struct response
         return status(rsp, 403);
     }
     case EISDIR: {
-        return status(rsp, 403); //check this code because it may not be correct
+        return status(rsp, 403);
     }
     default: {
         return status(rsp, 403);

@@ -19,6 +19,4 @@ infer:
 				make clean; infer-capture -- make; infer-analyze -- make
 format:			
 				clang-format -i -style=file *.[ch]
-test:
-				./scripts/test.sh
 all:			httpserver

@@ -12,7 +12,6 @@ Node *create_node(int head, int val) {
 }
 
 void delete_node(Node *n) {
-    //printf("deleting header: %s: %s\n", n->head, n->val);
     free(n->head);
     free(n->val);
     free(n);
@@ -24,7 +23,6 @@ void delete_list(Node *head) {
     if (head != NULL) {
         Node *ptr = head;
         Node *next;
-        //printf("Starting to delete\n");
         do {
             next = ptr->next;
             delete_node(ptr);

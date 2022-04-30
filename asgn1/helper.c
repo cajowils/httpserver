@@ -11,6 +11,8 @@ uint16_t strtouint16(char number[]) {
     return num;
 }
 
+//takes the professor's function and does the same thing but for ints to allow for larger numbers
+
 int strtoint(char number[]) {
     char *last;
     long num = strtol(number, &last, 10);
