@@ -23,11 +23,6 @@
 #include "helper.h"
 #include "list.h"
 
-/**
-   Converts a string to an 16 bits unsigned integer.
-   Returns 0 if the string is malformed or out of the range.
- */
-
 void send_response(struct response rsp, int connfd) {
 
     int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
@@ -39,7 +34,6 @@ void send_response(struct response rsp, int connfd) {
 
     Node *ptr = rsp.headers->next;
     while (ptr != NULL) {
-        //printf("%s: %s\r\n", rsp.headers[i].head, rsp.headers[i].val);
         int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val) + 5;
         char *header_buf = (char *) calloc(1, sizeof(char) * header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
@@ -57,7 +51,8 @@ void send_response(struct response rsp, int connfd) {
         while ((size = read(rsp.fd, buf2, bytes)) > 0) {
             write(connfd, buf2, size);
         }
-    } else {
+    }
+    else {
 
         int phrase_size = (int) strlen(rsp.line.phrase) + 2;
         char *phrase_buf = (char *) calloc(1, sizeof(char) * phrase_size);
@@ -103,36 +98,13 @@ void finish_writing(struct request req, struct response rsp, int fd) {
     char buf[bytes];
     int bytes_written = 0;
 
-    int read_bytes
-        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    //printf("testing here\n");
-
-    /*if (req.body_read < req.body_size && st.st_size > 0) {
-
-        
-
-        while ((size = read(fd, buf, read_bytes)) > 0) {
-            //printf("size: %d\n", size);
-            //printf("read_bytes: %d\nbody read: %d\nbody size: %d\n", read_bytes, req.body_read, req.body_size);
-
-            bytes_written = write(rsp.fd, buf, size);
-            req.body_read += size;
-            read_bytes
-                = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-            if (req.body_read >= req.body_size || bytes_written < bytes) {
-                break;
-            }
-        }
-    }*/
-
+    int read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
         size = read(fd, buf, read_bytes);
         bytes_written = write(rsp.fd, buf, size);
         req.body_read += size;
-        read_bytes
-            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+        read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     } while (size > 0); //&& bytes_written >= bytes);
-    //printf("after write\n");
 
     return;
 }
@@ -146,16 +118,10 @@ int read_all(int fd, char *buf, int nbytes) {
         bytes = 0;
         //return 500
     }
-
-
-    //printf("before read\n");
     do {
         bytes = read(fd, buf+total, nbytes-total);
         total+=bytes;
-        
-        //printf("read\n");
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
-    //printf("done reading\n");
     regfree(&re);
     return total;
 }
@@ -163,35 +129,21 @@ int read_all(int fd, char *buf, int nbytes) {
 void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
-    //int size = read(connfd, r, bytes);
-    //printf("reading all\n");
     int size = read_all(connfd, r, bytes);
-    //printf("request:\n%s\n", r);
 
     // parse the buffer for all of the request information and put it in a request struct
-    //printf("parsing request\n");
     struct request req = parse_request_regex(r, size);
-    //printf("processing response\n");
 
     struct response rsp = process_request(req);
-    //printf("finish writing\n");
     if ((rsp.line.code == 200 || rsp.line.code == 201) && (req.mode == 1 || req.mode == 2)) {
         finish_writing(req, rsp, connfd);
     }
-    //printf("sending response\n");
 
     send_response(rsp, connfd);
 
-    // check for errors in the request (wrong version, format, etc) and issue appropriate status
-    // send the request to the appropriate method (GET, PUT, APPEND) to deal with the response there
-    //printf("code: %d\n", rsp.line.code);
-    //printf("Before frees\n");
     free(r);
-    //printf("buffer freed\n");
     delete_request(req);
-    //printf("request deleted\n");
     delete_response(rsp);
-    //printf("response deleted\n");
     return;
 }
 

@@ -98,7 +98,6 @@ struct response GET(struct response rsp, struct request req) {
     }
     }
 
-    //printf("file size: %ld\n", st.st_size);
     int head_size = (int) strlen("Content-Length");
     int stat_size = (int) st.st_size;
     int val_size
@@ -131,9 +130,9 @@ struct response
         rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
         s = 200;
     } else {
+        errno = 0;
         rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
         s = 201;
-        errno = 0;
     }
 
     struct stat st;
@@ -168,12 +167,6 @@ struct response
         
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
-    warnx("APPEND open error");
-    struct stat st;
-    fstat(rsp.fd, &st);
-    if (rsp.fd > 0 && S_ISDIR(st.st_mode)) {
-        errno = EISDIR;
-    }
     switch (errno) {
     case 0: {
         break;
@@ -185,7 +178,7 @@ struct response
         return status(rsp, 403);
     }
     case EISDIR: {
-        return status(rsp, 403); //check this code because it may not be correct
+        return status(rsp, 403);
     }
     default: {
         return status(rsp, 404);
@@ -216,16 +209,6 @@ struct response
         return (APPEND(rsp, req));
     }
     }
-
-    //look at method and decide if it is acceptable
-
-    //look at the URI and verify that it exists
-
-    //look at version and verify it is the right one
-
-    //read in the headers
-
-    //read the body if indicated by the method
 
     return status(rsp, 501);
 }
