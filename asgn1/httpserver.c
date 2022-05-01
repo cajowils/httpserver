@@ -30,7 +30,6 @@ void send_response(struct response rsp, int connfd) {
     char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, line_buf, line_size - 1);
-    printf("response line: %s\n", line_buf);
     free(line_buf);
 
     Node *ptr = rsp.headers->next;
@@ -135,7 +134,6 @@ void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     int size = read_all(connfd, r, bytes);
-    printf("request:\n%s", r);
 
     // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request_regex(r, size);
@@ -147,7 +145,6 @@ void handle_connection(int connfd) {
             || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
         finish_writing(req, rsp, connfd);
     }
-    printf("code: %d\n", rsp.line.code);
 
     send_response(rsp, connfd);
 
