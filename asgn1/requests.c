@@ -10,7 +10,7 @@
 
 struct request parse_request_regex(char *r, int size) {
     struct request req = new_request();
-    
+
     if (size < 1) {
         req.error = 400;
         return req;
@@ -73,12 +73,14 @@ struct request parse_request_regex(char *r, int size) {
         req.line.method = (char *) calloc(1, sizeof(char) * method_size);
         strncpy(req.line.method, r + groups[1].rm_so, method_size);
 
-
-        if (strncmp(req.line.method, "GET", method_size) == 0 || strncmp(req.line.method, "get", method_size) == 0) {
+        if (strncmp(req.line.method, "GET", method_size) == 0
+            || strncmp(req.line.method, "get", method_size) == 0) {
             req.mode = 0;
-        } else if (strncmp(req.line.method, "PUT", method_size) == 0 || strncmp(req.line.method, "put", method_size) == 0) {
+        } else if (strncmp(req.line.method, "PUT", method_size) == 0
+                   || strncmp(req.line.method, "put", method_size) == 0) {
             req.mode = 1;
-        } else if (strncmp(req.line.method, "APPEND", method_size) == 0 || strncmp(req.line.method, "append", method_size) == 0) {
+        } else if (strncmp(req.line.method, "APPEND", method_size) == 0
+                   || strncmp(req.line.method, "append", method_size) == 0) {
             req.mode = 2;
         } else {
             req.error = 501;
@@ -87,12 +89,12 @@ struct request parse_request_regex(char *r, int size) {
 
         //Getting URI
         int uri_size = groups[2].rm_eo - groups[2].rm_so;
-        req.line.URI = (char *) calloc(1, sizeof(char) * uri_size+1);
+        req.line.URI = (char *) calloc(1, sizeof(char) * uri_size + 1);
         strncpy(req.line.URI, r + groups[2].rm_so, uri_size);
 
         //Gettng HTTP Version
         int version_size = groups[4].rm_eo - groups[4].rm_so;
-        req.line.version = (char *) calloc(1, sizeof(char) * version_size+1);
+        req.line.version = (char *) calloc(1, sizeof(char) * version_size + 1);
         strncpy(req.line.version, r + groups[4].rm_so, version_size);
         headers_start = groups[4].rm_eo;
 
@@ -100,7 +102,7 @@ struct request parse_request_regex(char *r, int size) {
             req.error = 400;
             return req;
         }
-        
+
         //Getting the end of the headers
         if (num_groups > 4) {
             headers_end = groups[5].rm_eo;
@@ -111,10 +113,15 @@ struct request parse_request_regex(char *r, int size) {
         req.error = 400;
         return req;
     }
+
     int content_found = 0;
+
     if (!no_headers) {
+
+        //Matches the headers and stores them in a linked list
+
         int h_size = headers_end - headers_start;
-        char *headers = (char *) calloc(1, sizeof(char) * h_size+1);
+        char *headers = (char *) calloc(1, sizeof(char) * h_size + 1);
         strncpy(headers, r + headers_start, h_size);
 
         char *h_pattern = "([a-zA-Z0-9-]+): ([a-zA-Z0-9_\\.:\\/\\*-]+)\r\n";
@@ -127,9 +134,10 @@ struct request parse_request_regex(char *r, int size) {
             return req;
         }
 
-        int num_h_matches = 5;
+        int num_h_matches = 1000;
         int num_h_groups = 3;
         regmatch_t h_groups[num_h_groups];
+
         Node *ptr = req.headers;
         char *curr_header = headers;
 
@@ -154,6 +162,8 @@ struct request parse_request_regex(char *r, int size) {
                 }
             }
 
+            // Copy the header to the linked list node
+
             int head_size = h_groups[1].rm_eo - h_groups[1].rm_so;
             int val_size = h_groups[2].rm_eo - h_groups[2].rm_so;
             ptr->next = create_node(head_size, val_size);
@@ -162,9 +172,11 @@ struct request parse_request_regex(char *r, int size) {
             strncpy(ptr->val, curr_header + h_groups[2].rm_so, val_size);
             req.num_headers++;
 
-            if (strcmp(ptr->head, "Content-Length") == 0 && !content_found) {
+            if (strcmp(ptr->head, "Content-Length") == 0
+                && !content_found) { // Checks for Content-Length
                 int is_number = 1;
-                for (int num=0; num < val_size; num++) {
+                for (int num = 0; num < val_size;
+                     num++) { // Makes sure the value of Content-Length is a number
                     if (!isdigit(ptr->val[num])) {
                         is_number = 0;
                     }

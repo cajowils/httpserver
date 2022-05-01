@@ -123,7 +123,6 @@ struct response GET(struct response rsp, struct request req) {
 struct response
     PUT(struct response rsp, struct request req) {
     int s;
-
     errno = 0;
 
     if (access(req.line.URI, F_OK) == 0) {
@@ -164,7 +163,7 @@ struct response
 
 struct response
     APPEND(struct response rsp, struct request req) {
-        
+
     errno = 0;
     rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
     switch (errno) {

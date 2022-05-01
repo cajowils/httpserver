@@ -3,6 +3,16 @@
 #include <string.h>
 #include "list.h"
 
+//Linked List
+
+///Roughly based off of Eugene's section code from my CSE13s Fall 2020 class
+
+//head: the first value of the header ("Content-Length")
+//val: the second value of the header ("100")
+//next: the next node of the list
+
+//starts with a dummy node as the head of the list
+
 Node *create_node(int head, int val) {
     Node *n = (Node *) calloc(1, sizeof(Node));
     n->next = NULL;

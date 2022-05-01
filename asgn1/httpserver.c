@@ -29,15 +29,16 @@ void send_response(struct response rsp, int connfd) {
                     + 8; //need 3 for the status code, 2 for spaces and 2 for the carriage return
     char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
-    write(connfd, line_buf, line_size-1);
+    write(connfd, line_buf, line_size - 1);
     free(line_buf);
 
     Node *ptr = rsp.headers->next;
     while (ptr != NULL) {
-        int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val) + 5;
+        int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val)
+                          + 5; //1 for colon, 1 for space, 2 for \r\n
         char *header_buf = (char *) calloc(1, sizeof(char) * header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
-        write(connfd, header_buf, header_size-1);
+        write(connfd, header_buf, header_size - 1);
         ptr = ptr->next;
         free(header_buf);
     }
@@ -51,13 +52,12 @@ void send_response(struct response rsp, int connfd) {
         while ((size = read(rsp.fd, buf2, bytes)) > 0) {
             write(connfd, buf2, size);
         }
-    }
-    else {
+    } else {
 
-        int phrase_size = (int) strlen(rsp.line.phrase) + 2;
+        int phrase_size = (int) strlen(rsp.line.phrase) + 2; //1 for /n
         char *phrase_buf = (char *) calloc(1, sizeof(char) * phrase_size);
         snprintf(phrase_buf, phrase_size, "%s\n", rsp.line.phrase);
-        write(connfd, phrase_buf, phrase_size-1);
+        write(connfd, phrase_buf, phrase_size - 1);
         free(phrase_buf);
     }
 
@@ -68,6 +68,7 @@ void send_response(struct response rsp, int connfd) {
    Creates a socket for listening for connections.
    Closes the program and prints an error message on error.
  */
+
 int create_listen_socket(uint16_t port) {
     struct sockaddr_in addr;
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -98,13 +99,15 @@ void finish_writing(struct request req, struct response rsp, int fd) {
     char buf[bytes];
     int bytes_written = 0;
 
-    int read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    int read_bytes
+        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
         size = read(fd, buf, read_bytes);
         bytes_written = write(rsp.fd, buf, size);
         req.body_read += size;
-        read_bytes = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    } while (size > 0); //&& bytes_written >= bytes);
+        read_bytes
+            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    } while (size > 0);
 
     return;
 }
@@ -119,8 +122,8 @@ int read_all(int fd, char *buf, int nbytes) {
         //return 500
     }
     do {
-        bytes = read(fd, buf+total, nbytes-total);
-        total+=bytes;
+        bytes = read(fd, buf + total, nbytes - total);
+        total += bytes;
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     regfree(&re);
     return total;
@@ -134,8 +137,11 @@ void handle_connection(int connfd) {
     // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request_regex(r, size);
 
+    //process the request and format it into a response
     struct response rsp = process_request(req);
-    if ((rsp.line.code == 200 || rsp.line.code == 201) && (req.mode == 1 || req.mode == 2)) {
+    if ((rsp.line.code == 200 || rsp.line.code == 201)
+        && (req.mode == 1
+            || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
         finish_writing(req, rsp, connfd);
     }
 
