@@ -23,6 +23,8 @@
 #include "helper.h"
 #include "list.h"
 
+//takes a rsp and an error code and formats the response appropriately
+
 struct response status(struct response rsp, int error_code) {
     rsp.line.code = error_code;
     rsp.line.phrase = (char *) calloc(1, sizeof(char) * 50);
@@ -33,14 +35,12 @@ struct response status(struct response rsp, int error_code) {
     case 403: strcpy(rsp.line.phrase, "Forbidden"); break;
     case 404: strcpy(rsp.line.phrase, "Not Found"); break;
     case 500: strcpy(rsp.line.phrase, "Internal Server Error"); break;
-    case 501:
-        strcpy(rsp.line.phrase, "Not Implemented");
-        break;
-        /*case 505:
-            strcpy(message, "HTTP Version Not Supported");
-            break;*/
+    case 501: strcpy(rsp.line.phrase, "Not Implemented"); break;
+    //case 505: strcpy(message, "HTTP Version Not Supported"); break;
     }
 
+
+    //Adds the headers to an unsuccessful GET request or any other type of request
     if (rsp.mode != 0 || rsp.line.code != 200) {
         Node *ptr = rsp.headers;
         while (ptr->next != NULL) {
@@ -50,7 +50,7 @@ struct response status(struct response rsp, int error_code) {
         int phrase_size = (int) strlen(rsp.line.phrase) + 1;
         int val_size = 1;
         int phrase_calc = phrase_size;
-        while (phrase_calc > 0) {
+        while (phrase_calc > 0) { //calculates amount of space needed for the Content-Length value
             phrase_calc /= 10;
             val_size++;
         }
@@ -67,10 +67,13 @@ struct response status(struct response rsp, int error_code) {
     return rsp;
 }
 
+//formats the response if it is a GET request
 struct response GET(struct response rsp, struct request req) {
     errno = 0;
 
     rsp.fd = open(req.line.URI, O_RDONLY);
+
+    //checks if it is a directory
     struct stat st;
     fstat(rsp.fd, &st);
     if (S_ISDIR(st.st_mode)) {
@@ -98,6 +101,7 @@ struct response GET(struct response rsp, struct request req) {
     }
     }
 
+    //adds headers to GET request
     int head_size = (int) strlen("Content-Length");
     int stat_size = (int) st.st_size;
     int val_size
@@ -107,7 +111,7 @@ struct response GET(struct response rsp, struct request req) {
         val_size++;
     }
     Node *ptr = rsp.headers;
-    while (ptr->next != NULL) {
+    while (ptr->next != NULL) { // gets last header to append to end of linked list
         ptr = ptr->next;
     }
     ptr->next = create_node(head_size, val_size);
@@ -120,6 +124,7 @@ struct response GET(struct response rsp, struct request req) {
     return status(rsp, 200);
 }
 
+//formats the response if it is a PUT request
 struct response
     PUT(struct response rsp, struct request req) {
     int s;
@@ -155,12 +160,13 @@ struct response
         warnx("PUT error");
     }
     }
-
+    //flushes the body that was read in with the request
     write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, s);
 }
 
+//formats the response if it is an APPEND request
 struct response
     APPEND(struct response rsp, struct request req) {
 
@@ -184,11 +190,13 @@ struct response
     }
     }
 
+    //flushes the body that was read in with the request
     write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, 200);
 }
 
+//processes the request by sending it to proper method
 struct response
     process_request(struct request req) {
     struct response rsp = new_response();
