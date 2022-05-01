@@ -162,7 +162,7 @@ struct response
     }
     }
     //flushes the body that was read in with the request
-    //write(rsp.fd, req.body, req.body_read);
+    write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, s);
 }
@@ -192,7 +192,7 @@ struct response
     }
 
     //flushes the body that was read in with the request
-    //write(rsp.fd, req.body, req.body_read);
+    write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, 200);
 }

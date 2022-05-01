@@ -102,12 +102,12 @@ void finish_writing(struct request req, struct response rsp, int fd) {
     int read_bytes
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
-        size = read(fd, buf, 4096);
-        bytes_written = write(rsp.fd, buf, read_bytes);
-        req.body_read += bytes_written;
+        size = read(fd, buf, read_bytes);
+        bytes_written = write(rsp.fd, buf, size);
+        req.body_read += size;
         read_bytes
             = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    } while (size > 0);
+    } while (size > 0 && req.body_read < req.body_size);
     free(buf);
 
     return;
@@ -123,7 +123,7 @@ int read_all(int fd, char *buf, int nbytes) {
         //return 500
     }
     do {
-        bytes = read(fd, buf + total, 1); //nbytes - total);
+        bytes = read(fd, buf + total, nbytes - total);
         total += bytes;
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     regfree(&re);
