@@ -1,49 +1,129 @@
-# Assignment 0 - Split
+# Assignment 1 - HTTP Server
 
-This program takes in a single-character delimiter and an arbitrary amount of files in the format:
-**./split <delimiter> <file1> <file2> ... <fileN>**
+This program establishes a local connection through a port, from which HTTP requests/responses can be exchanged. It uses three methods to communicate with the client:
++ GET - The client requests the contents of a file from the server
++ PUT - The client wishes to create or update a file with contents in the request
++ APPEND - The client wishes to append a file with the contents in the request
 
-The objective is to produce an output which contains a newline in the place of each occurance of **<delimiter>** in each file. For example, upon reading **./split a foo.txt** where foo.txt contains the string: **bcdadeiabeidafaoeudh**, the program would produce:
-```
-bcd
-dei
-beid
-f
-oeudh
-```
+Once a connection is made, the server goes through a process of steps to handle it:
+1. Reading in the bytes from the client
+2. Deserializing the information (validating and parsing the request)
+3. Processing the request based on the method
+4. Reading/Writing the specified files
+5. Serializing and sending the response back to the client
 
-If a **'-'** is found in the place of a file, input is read in and processed from stdin. It is allowed, however, to have a mix between files and reads from stdin, in arbitrary order and quantity.
+
+## Getting Started
+
+To run this program, you might find it helpful to use two terminal windows. In the first window, compile everything with 'make'. Then run './httpserver <port-number>' to open the communication link on any avaiable port of your choosing.
+In the next window, you can test a request with Netcat. To do this, type in 
+
+    echo -e -n "GET /foo.txt HTTP/1.1\r\n\r\n" | nc localhost <port-number>
+If you have foo.txt in the same directory as httpserver, then you should receive a 200 OK response, along with the contents of foo.txt
+
+## Structures
+
+In this program, I use a few data structures to help me keep track of my requests and responses.
+
+### Request Struct
+
+These store information to be used when parsing the request, such as:
+* Method
+* URI
+* Version
+* Body
+* Headers (as a Linked List)
+
+They also keeps track of how much of the body has been read, how many headers there are, the size of Content-Length, and if there is an error when parsing.
+
+### Response Struct
+
+The responses are similar to the requests. They store:
+* Version
+* Status Code
+* Status Phrase
+* Headers (as a Linked List)
+
+They also keep track of the File Descriptor, the number of headers, and whether Content-Length has been added to the response.
+
+### Linked List Struct
+
+I used a linked list to store the headers of the requests and responses. This allows me to process an unspecified amount of headers, since we can't know beforehand how many we will need.
+For "Content-Length: 100", each node consists of:
+* head - the name of the header (i.e. Content-Length)
+* val - the value of the header (i.e. 100)
+* next - the next node in the linked list
 
 ## Functionality
 
-The main functionality of this program is opening files using open(), then reading them using read() and writing to stdout using write(). In main, the program iterates over all of the files given in argv, and decides how to process them. If it is a valid file, then it is passed to replace() with the appropriate fd. If it is **'-'**, then it is sent through replace() with an fd of 0, since that is the file descriptor of stdin. Otherwise, there is an error, which I will talk about below.
+### handle_connection()
 
-replace() is a function that takes in a file descriptor and a delimiter. It's purpose is to read() bytes into a buffer, iterate over the buffer to replace all instances of **<delimiter>** with **'\n'**, then write() the buffer to stdout. To optimize this process, I used a ternary statement rather than a conditional during the iteration, which assigns a value to buffer[i] depending on whether or not it is the delimiter. The reason I chose to make this function is because it saved me from reusing the same code for the stdin instances and file instances, rather, I was able to combine them by passing in their respective file descriptors.
+This is the function that encompasses the steps I went over earlier. It calls the following functions in order to read, deserialize, process, serialize, and send requests.
 
-## Errors
+### read_all()
 
-This program checks for errors in a variety of ways. While it is a small program, there are certainly still circumstances where it should be expected to fail.
+This function reads into a buffer from the socket up to 2048 bytes, looking for a valid request indicator \r\n\r\n. Once the indicator has been found, or 2048 bytes have been read, it sends the total number of bytes that were read.
 
-The first instance of error checking occurs in main(), where the number of arguments (argc) is verified to be over 2. Otherwise, there are not a valid number of arguments, and errx() is used to display an error message and return with the error code of 22.
+### parse_request_regex()
 
-The next instance regards the length of the delimiter. If it is over 1 character long, then it is not valid and the same error handling is used as before.
+To parse the request, I decided to use REGEX. I split the request into groupings to allow me to process each part of the request. Each group may capture the method, URI, version, or header field. If any of these parts are off, it sends 501 Not Implemented or 400 Bad Request as a response.
 
-In the case of a file that does not exist, or a file without permission to access, I check for this when using open(). If it returns a valid file, the program runs as expected, and otherwise uses warn() to display the error and later remembers to return that error number.
+After checking the request line, I look through the header fields and store each one as a linked list node. If it finds Content-Length, it keeps a note of it's value for later use.
 
-In the event that the output device is full when writing, the program uses errx() to show the issue and returns the error code, exiting the program.
+### process_request()
+
+This function is mainly used as an abstraction for processing requests. It determines which method the request is asking for, and redirects it to one of the following functions.
+
+### GET()
+
+This handles GET requests. It attempts to open the file based on the URI provided, but may provide a variety of responses depending on the case.
+* If the URI is a directory or has bad permissions, it will return 403: Forbidden
+* If the URI doesn't exists, it will return 404: Not Found
+* Otherwise, if it does exist and can be read from, it will return 200 OK
+
+If the file is good, then it adds the Content-Length of it to the response struct and passes it along to status().
+
+### PUT()
+
+This handles PUT requests. Similar to GET(), it will have different results depending on the URI it is given.
+* If the URI is a directory or has bad permissions, it will return 403: Forbidden
+* If the URI doesn't exist, it will try to create the file
+* Otherwise, it returns 200 OK and will write the contents of the body to the file
+
+Upon success, it will dump the contents of the body into the file, then later write the rest of the bytes from the socket to the file.
+
+### APPEND()
+
+This handles APPEND requests. It is very similar to PUT(), with a few changes:
+* If the file can't be found, it will return 404: Not Found
+
+It will also write to the end of the file provided by the URI, rather than replacing it.
+
+### status()
+
+This function is used to finalize the response formatting. It takes in a response struct and an error code and sets the phrase and code appropriately. It also sets the Content-Length header for responses without a body.
+
+### send_response()
+Finishes formatting the response and sends the output to the socket. Upon a successful GET request, the body of the provided file will be written after the response line.
+
+### finish_writing()
+
+This writes all of the bytes within the Content-Length's specifications to a file from the socket. This allows the program to avoid using an unnecessarily large buffer to store the contents before hand. It reads and writes at most 4096 bytes at a time, and stops once the client halts the connection.
 
 ## Reflection
 
-I learned quite a bit in this assignment, including syscalls (open, read, write), the use of error handling (errx, warn), optimizing runtime in C, and running Linux. There were certain points were I had to make creative decisions that weren't necessarily outlined in the Lab Doc which I would like to talk about here.
+This assignment was a doozy. I've spent more time on this than any other project I've had to work on in the past. That being said, I found it to be incredibly insightful and rewarding. I took Dr. Quinn's advice and approached this with a mix between "Top-Down" and "Bottom-Up" modularity, and found success in this. I was able to explore the requirements of the task and put together the modules as I went.
 
-I ended up using syscalls to read and write since we were not allowed to use certain functions in stdio. I found these functions to be very effective for the goal of the assignment, however, and am glad I have exposure to them now.
+I started with parsing, and came up with a very broken solution after a little while of playing around with it. It read the request one character at a time and tried to format the request like that. It worked for a while, but struggled with invalid requests. I was able to get my other functions working pretty well with it, but once I finished them, I went back and redid the whole module using REGEX. This made my life so much easier, as it was able to check for invalidity very easily. Since I already had the other modules in place, it was incredibly easy to swap the old one for the new one.
 
-I ended up going with warn and errx because using printf and related functions sometimes called upon functions that were disallowed to us, but I found that these functions were equally as effective, and in certain cases, even more so, such as how warn() automatically displays the warning based off of the last error to occur.
-
-I gave my buffer a size of 1000000 Bytes (1 MB), which might be overkill, but I found it to be very fast for large files during testing.
+I ended up learning to use Shell Script and came up with 53 tests validate my program. It runs each test against the output of the resource binary, and eventually I was able to use this to pass all 53. This was extremely nice for finding where bugs were coming from, and I will definitely use this strategy in the future.
 
 ## Collaboration
+In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the asgn1-general discord, and spoke to tutors and TAs about problems/ideas for my implementation. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.
 
-In this assingment, I looked up the usage of functions such as read(), write(), open(), errx(), warn(), and found documentation on the man pages, as well as sites such as GeeksforGeeks and stackoverflow. All code is my own, but I thought I would reference these places as contributors.
+I feel it is neccessary to mention that I referenced the code I used back in Fall 2020 when I took CSE13s. Eugene gave us a good Linked List, and I built the one in this project with that in mind.
 
-I also discussed high level ideas on Discord in asgn0-general, and spoke with a tutor about optimization techniques.
+When learning to match on REGEX expressions, I found a particular stack overflow post to be helpful:
+https://stackoverflow.com/questions/2577193/how-do-you-capture-a-group-with-regex
+
+I used some of the ideas by Ian Mackinnon in this post to help learn how to find matches, and give them credit for this.

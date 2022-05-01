@@ -61,7 +61,7 @@ struct response status(struct response rsp, int error_code) {
         snprintf(ptr->val, val_size, "%d", phrase_size);
 
         rsp.num_headers++;
-        rsp.content_set++;
+        rsp.content_set=1;
     }
 
     return rsp;
