@@ -119,9 +119,9 @@ I started with parsing, and came up with a very broken solution after a little w
 I ended up learning to use Shell Script and came up with 53 tests validate my program. It runs each test against the output of the resource binary, and eventually I was able to use this to pass all 53. This was extremely nice for finding where bugs were coming from, and I will definitely use this strategy in the future.
 
 ## Collaboration
-In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the asgn1-general discord, and spoke to tutors and TAs about problems/ideas for my implementation. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.
+In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the asgn1-general discord, and spoke to tutors and TAs about problems/ideas for my implementation. I also used Eugene's read_all() and part of write_all() that he gave us. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.
 
-I feel it is neccessary to mention that I referenced the code I used back in Fall 2020 when I took CSE13s. Eugene gave us a good Linked List, and I built the one in this project with that in mind.
+I feel it is neccessary to mention that I referenced the Linked List code Eugene gave us back in Fall 2020 when I took CSE13s. While they are quite different now, I built the one in this project with that in mind.
 
 When learning to match on REGEX expressions, I found a particular stack overflow post to be helpful:
 https://stackoverflow.com/questions/2577193/how-do-you-capture-a-group-with-regex

@@ -30,6 +30,7 @@ void send_response(struct response rsp, int connfd) {
     char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, line_buf, line_size - 1);
+    printf("response line: %s\n", line_buf);
     free(line_buf);
 
     Node *ptr = rsp.headers->next;
@@ -102,9 +103,9 @@ void finish_writing(struct request req, struct response rsp, int fd) {
     int read_bytes
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
-        size = read(fd, buf, read_bytes);
-        bytes_written = write(rsp.fd, buf, size);
-        req.body_read += size;
+        size = read(fd, buf, 4096);
+        bytes_written = write(rsp.fd, buf, read_bytes);
+        req.body_read += bytes_written;
         read_bytes
             = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     } while (size > 0 && req.body_read < req.body_size);
@@ -123,7 +124,7 @@ int read_all(int fd, char *buf, int nbytes) {
         //return 500
     }
     do {
-        bytes = read(fd, buf + total, nbytes - total);
+        bytes = read(fd, buf + total, 1); //nbytes - total);
         total += bytes;
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     regfree(&re);
@@ -134,6 +135,7 @@ void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     int size = read_all(connfd, r, bytes);
+    printf("request:\n%s", r);
 
     // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request_regex(r, size);
@@ -145,6 +147,7 @@ void handle_connection(int connfd) {
             || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
         finish_writing(req, rsp, connfd);
     }
+    printf("code: %d\n", rsp.line.code);
 
     send_response(rsp, connfd);
 
