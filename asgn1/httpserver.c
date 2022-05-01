@@ -96,7 +96,7 @@ int create_listen_socket(uint16_t port) {
 void finish_writing(struct request req, struct response rsp, int fd) {
     int bytes = 4096;
     int size = 0;
-    char *buf = (char *) calloc(1, sizeof(char)*bytes);
+    char *buf = (char *) calloc(1, sizeof(char) * bytes);
     int bytes_written = 0;
 
     int read_bytes

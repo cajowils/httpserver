@@ -35,10 +35,11 @@ struct response status(struct response rsp, int error_code) {
     case 403: strcpy(rsp.line.phrase, "Forbidden"); break;
     case 404: strcpy(rsp.line.phrase, "Not Found"); break;
     case 500: strcpy(rsp.line.phrase, "Internal Server Error"); break;
-    case 501: strcpy(rsp.line.phrase, "Not Implemented"); break;
-    //case 505: strcpy(message, "HTTP Version Not Supported"); break;
+    case 501:
+        strcpy(rsp.line.phrase, "Not Implemented");
+        break;
+        //case 505: strcpy(message, "HTTP Version Not Supported"); break;
     }
-
 
     //Adds the headers to an unsuccessful GET request or any other type of request
     if (rsp.mode != 0 || rsp.line.code != 200) {
@@ -61,7 +62,7 @@ struct response status(struct response rsp, int error_code) {
         snprintf(ptr->val, val_size, "%d", phrase_size);
 
         rsp.num_headers++;
-        rsp.content_set=1;
+        rsp.content_set = 1;
     }
 
     return rsp;
