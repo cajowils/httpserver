@@ -103,7 +103,7 @@ int read_all(int fd, char *buf, int nbytes) {
         return -1;
     }
     do {
-        bytes = read(fd, buf + total, 1);//nbytes - total);
+        bytes = read(fd, buf + total, nbytes - total);
         if (bytes < 0) {
             return -1;
         }

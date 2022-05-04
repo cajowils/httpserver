@@ -32,7 +32,7 @@ int finish_writing(struct request req, struct response rsp, int fd) {
 
     
     do {
-        size = read(fd, buf, 4096);
+        size = read(fd, buf, bytes);
         if (size < 0) {
             return -1;
         }
@@ -189,7 +189,7 @@ struct response
     }
     }
     //flushes the body that was read in with the request
-    //write(rsp.fd, req.body, req.body_read);
+    write(rsp.fd, req.body, req.body_read);
     if (finish_writing(req, rsp, req.connfd) < 0) {
         return status(rsp, 500);
     }
@@ -222,7 +222,7 @@ struct response
     }
 
     //flushes the body that was read in with the request
-    //write(rsp.fd, req.body, req.body_read);
+    write(rsp.fd, req.body, req.body_read);
 
     if (finish_writing(req, rsp, req.connfd) < 0) {
         return status(rsp, 500);
