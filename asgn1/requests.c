@@ -71,7 +71,7 @@ struct request parse_request_regex(char *r, int size) {
         }
 
         // Getting the index of the body
-        body_start = groups[0].rm_eo;
+        body_start = groups[0].rm_eo + 1;
 
         // Getting Method
         int method_size = groups[1].rm_eo - groups[1].rm_so;
@@ -207,7 +207,7 @@ struct request parse_request_regex(char *r, int size) {
             return req;
         }
     
-        req.body_read = size - body_start;
+        req.body_read = size - body_start + 1;
 
         req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
         strncpy(req.body, r + body_start, req.body_read);
