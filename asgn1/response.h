@@ -18,6 +18,8 @@ struct response {
     int content_set;
 };
 
+int finish_writing(struct request req, struct response rsp, int fd);
+
 struct response status(struct response rsp, int error_code);
 
 struct response GET(struct response rsp, struct request req);

@@ -23,6 +23,33 @@
 #include "helper.h"
 #include "list.h"
 
+int finish_writing(struct request req, struct response rsp, int fd) {
+    int bytes = 4096;
+    int size = 0;
+    char *buf = (char *) calloc(1, sizeof(char) * bytes);
+    int bytes_written = 0;
+    int read_bytes = 0;
+
+    
+    do {
+        size = read(fd, buf, 4096);
+        if (size < 0) {
+            return -1;
+        }
+        if (req.body_read < req.body_size) {
+            read_bytes = (req.body_size - req.body_read > size) ? size : req.body_size - req.body_read;
+            bytes_written = write(rsp.fd, buf, read_bytes);
+            if (bytes_written < 0) {
+                return -1;
+            }
+            req.body_read += bytes_written;
+        }
+    } while (size > 0);
+    free(buf);
+
+    return 0;
+}
+
 //takes a rsp and an error code and formats the response appropriately
 
 struct response status(struct response rsp, int error_code) {
@@ -162,7 +189,10 @@ struct response
     }
     }
     //flushes the body that was read in with the request
-    write(rsp.fd, req.body, req.body_read);
+    //write(rsp.fd, req.body, req.body_read);
+    if (finish_writing(req, rsp, req.connfd) < 0) {
+        return status(rsp, 500);
+    }
 
     return status(rsp, s);
 }
@@ -192,7 +222,11 @@ struct response
     }
 
     //flushes the body that was read in with the request
-    write(rsp.fd, req.body, req.body_read);
+    //write(rsp.fd, req.body, req.body_read);
+
+    if (finish_writing(req, rsp, req.connfd) < 0) {
+        return status(rsp, 500);
+    }
 
     return status(rsp, 200);
 }

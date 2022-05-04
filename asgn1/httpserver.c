@@ -93,25 +93,6 @@ int create_listen_socket(uint16_t port) {
     return listenfd;
 }
 
-void finish_writing(struct request req, struct response rsp, int fd) {
-    int bytes = 4096;
-    int size = 0;
-    char *buf = (char *) calloc(1, sizeof(char) * bytes);
-    int bytes_written = 0;
-
-    int read_bytes
-        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    do {
-        size = read(fd, buf, read_bytes);
-        bytes_written = write(rsp.fd, buf, size);
-        req.body_read += size;
-        read_bytes
-            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    } while (size > 0 && req.body_read < req.body_size);
-    free(buf);
-
-    return;
-}
 
 int read_all(int fd, char *buf, int nbytes) {
     int total = 0;
@@ -119,11 +100,13 @@ int read_all(int fd, char *buf, int nbytes) {
     const char *pattern = "\r\n\r\n";
     regex_t re;
     if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
-        bytes = 0;
-        //return 500
+        return -1;
     }
     do {
-        bytes = read(fd, buf + total, nbytes - total);
+        bytes = read(fd, buf + total, 1);//nbytes - total);
+        if (bytes < 0) {
+            return -1;
+        }
         total += bytes;
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     regfree(&re);
@@ -134,19 +117,17 @@ void handle_connection(int connfd) {
     int bytes = 2048;
     char *r = (char *) calloc(1, sizeof(char) * bytes);
     int size = read_all(connfd, r, bytes);
+    //printf("Request:\n%s\n", r);
 
     // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request_regex(r, size);
+    req.connfd = connfd;
 
     //process the request and format it into a response
     struct response rsp = process_request(req);
-    if ((rsp.line.code == 200 || rsp.line.code == 201)
-        && (req.mode == 1
-            || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
-        finish_writing(req, rsp, connfd);
-    }
 
     send_response(rsp, connfd);
+    //printf("status: %d\n", rsp.line.code);
 
     free(r);
     delete_request(req);
