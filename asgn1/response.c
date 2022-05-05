@@ -33,7 +33,7 @@ int write_all(struct request req, struct response rsp, int fd) {
     int bytes_written = 0;
     int read_bytes = 0;
 
-    if (req.body_size < req.body_read) {
+    if (req.body_size > req.body_read) {
 
         do {
             if ((size = read(fd, buf, bytes-1)) < 0) {
