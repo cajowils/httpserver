@@ -33,19 +33,21 @@ int write_all(struct request req, struct response rsp, int fd) {
     int bytes_written = 0;
     int read_bytes = 0;
 
-    
-    do {
-        if ((size = read(fd, buf, bytes-1)) < 0) {
-            return -1;
-        }
-        if (req.body_read < req.body_size) {
-            read_bytes = (req.body_size - req.body_read > size) ? size : req.body_size - req.body_read;
-            if ((bytes_written = write(rsp.fd, buf, read_bytes)) < 0) {
+    if (req.body_size < req.body_read) {
+
+        do {
+            if ((size = read(fd, buf, bytes-1)) < 0) {
                 return -1;
             }
-            req.body_read += bytes_written;
-        }
-    } while (size > 0);
+            if (req.body_read < req.body_size) {
+                read_bytes = (req.body_size - req.body_read > size) ? size : req.body_size - req.body_read;
+                if ((bytes_written = write(rsp.fd, buf, read_bytes)) < 0) {
+                    return -1;
+                }
+                req.body_read += bytes_written;
+            }
+        } while (size > 0);
+    }
     free(buf);
 
     return 0;
