@@ -189,11 +189,6 @@ static void sigterm_handler(int sig) {
         fclose(logfile);
         exit(EXIT_SUCCESS);
     }
-    if (sig == SIGINT) {
-        warnx("received SIGINT");
-        fclose(logfile);
-        exit(EXIT_SUCCESS);
-    }
 }
 
 static void usage(char *exec) {
@@ -238,7 +233,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, sigterm_handler);
 
     int listenfd = create_listen_socket(port);
-    LOG("port=%" PRIu16 ", threads=%d\n", port, threads);
+    //LOG("port=%" PRIu16 ", threads=%d\n", port, threads);
 
     for (;;) {
         int connfd = accept(listenfd, NULL, NULL);
