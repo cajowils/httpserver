@@ -173,9 +173,10 @@ void handle_connection(int connfd) {
     }
 
     send_response(rsp, connfd);
-
-    LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
-    fflush(logfile);
+    if (req.line.method != NULL && req.line.URI != NULL) {
+        LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
+        fflush(logfile);
+    }
 
     free(r);
     delete_request(req);

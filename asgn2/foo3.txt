@@ -1,4 +1,2 @@
-port=8080, threads=4
-PUT,/files/trunc.txt,200,10
 PUT,/files/trunc.txt,200,10
 PUT,/files/trunc.txt,200,10
