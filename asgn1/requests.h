@@ -22,8 +22,6 @@ struct request {
 
 struct request parse_request_regex(char *r, int size);
 
-struct request parse_request(char *req);
-
 struct request new_request();
 
 void delete_request(struct request req);

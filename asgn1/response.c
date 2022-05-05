@@ -23,37 +23,6 @@
 #include "helper.h"
 #include "list.h"
 
-int write_all(struct request req, struct response rsp) {
-    if (write(rsp.fd, req.body, req.body_read) < 0) {
-        return -1;
-    }
-    /*
-    int bytes = 4096;
-    int size = 0;
-    char *buf = (char *) calloc(1, sizeof(char) * bytes);
-    int bytes_written = 0;
-    int read_bytes = 0;
-
-    if (req.body_size > req.body_read) {
-
-        do {
-            if ((size = read(fd, buf, bytes-1)) < 0) {
-                return -1;
-            }
-            if (req.body_read < req.body_size) {
-                read_bytes = (req.body_size - req.body_read > size) ? size : req.body_size - req.body_read;
-                if ((bytes_written = write(rsp.fd, buf, read_bytes)) < 0) {
-                    return -1;
-                }
-                req.body_read += bytes_written;
-            }
-        } while (size > 0);
-    }
-    free(buf);*/
-
-    return 0;
-}
-
 //takes a rsp and an error code and formats the response appropriately
 
 struct response status(struct response rsp, int error_code) {
@@ -159,15 +128,18 @@ struct response GET(struct response rsp, struct request req) {
 //formats the response if it is a PUT request
 struct response
     PUT(struct response rsp, struct request req) {
-    int s = 200;
+    int s;
     errno = 0;
 
     if (access(req.line.URI, F_OK) == 0) {
         rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
+        s = 200;
     } else {
+        errno = 0;
         rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
         s = 201;
     }
+
     struct stat st;
     fstat(rsp.fd, &st);
     if (S_ISDIR(st.st_mode)) {
@@ -176,9 +148,6 @@ struct response
 
     switch (errno) {
     case 0: {
-        break;
-    }
-    case ENOENT: {
         break;
     }
     case EACCES: {
@@ -193,9 +162,7 @@ struct response
     }
     }
     //flushes the body that was read in with the request
-    if (write_all(req, rsp) < 0) {
-        return status(rsp, 500);
-    }
+    write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, s);
 }
@@ -225,10 +192,7 @@ struct response
     }
 
     //flushes the body that was read in with the request
-
-    if (write_all(req, rsp) < 0) {
-        return status(rsp, 500);
-    }
+    write(rsp.fd, req.body, req.body_read);
 
     return status(rsp, 200);
 }

@@ -11,11 +11,6 @@
 struct request parse_request_regex(char *r, int size) {
     struct request req = new_request();
 
-    if (size < 0) {
-        req.error = 500;
-        return req;
-    }
-
     if (size < 1) {
         req.error = 400;
         return req;
@@ -206,7 +201,7 @@ struct request parse_request_regex(char *r, int size) {
             req.error = 400;
             return req;
         }
-    
+
         req.body_read = size - body_start;
 
         req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;

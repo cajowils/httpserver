@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -Werror -pedantic -g
+CFLAGS=-Wall -Wextra -Werror -pedantic
 CC=clang $(CFLAGS)
 
 httpserver:		httpserver.o requests.o response.o helper.o list.o
