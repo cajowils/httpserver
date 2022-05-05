@@ -158,18 +158,15 @@ struct response GET(struct response rsp, struct request req) {
 //formats the response if it is a PUT request
 struct response
     PUT(struct response rsp, struct request req) {
-    int s;
+    int s = 200;
     errno = 0;
 
     if (access(req.line.URI, F_OK) == 0) {
         rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
-        s = 200;
     } else {
-        errno = 0;
         rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
         s = 201;
     }
-
     struct stat st;
     fstat(rsp.fd, &st);
     if (S_ISDIR(st.st_mode)) {
@@ -178,6 +175,9 @@ struct response
 
     switch (errno) {
     case 0: {
+        break;
+    }
+    case ENOENT: {
         break;
     }
     case EACCES: {
