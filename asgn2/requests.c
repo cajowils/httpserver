@@ -188,7 +188,7 @@ struct request parse_request_regex(char *r, int size) {
                 }
             }
 
-            if (strcmp(ptr->head, "Request-ID") == 0) {
+            if (strcmp(ptr->head, "Request-Id") == 0) {
                 if (is_number(ptr->val, val_size)) {
                     int ID = strtoint(ptr->val);
                     if (ID > 0) {
