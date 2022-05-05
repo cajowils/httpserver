@@ -18,10 +18,11 @@ struct request {
     int body_size;
     int mode;
     int error;
-    int connfd;
 };
 
 struct request parse_request_regex(char *r, int size);
+
+struct request parse_request(char *req);
 
 struct request new_request();
 

@@ -23,10 +23,11 @@
 #include "helper.h"
 #include "list.h"
 
-int write_all(struct request req, struct response rsp, int fd) {
+int write_all(struct request req, struct response rsp) {
     if (write(rsp.fd, req.body, req.body_read) < 0) {
         return -1;
     }
+    /*
     int bytes = 4096;
     int size = 0;
     char *buf = (char *) calloc(1, sizeof(char) * bytes);
@@ -48,7 +49,7 @@ int write_all(struct request req, struct response rsp, int fd) {
             }
         } while (size > 0);
     }
-    free(buf);
+    free(buf);*/
 
     return 0;
 }
@@ -192,7 +193,7 @@ struct response
     }
     }
     //flushes the body that was read in with the request
-    if (write_all(req, rsp, req.connfd) < 0) {
+    if (write_all(req, rsp) < 0) {
         return status(rsp, 500);
     }
 
@@ -225,7 +226,7 @@ struct response
 
     //flushes the body that was read in with the request
 
-    if (write_all(req, rsp, req.connfd) < 0) {
+    if (write_all(req, rsp) < 0) {
         return status(rsp, 500);
     }
 
