@@ -123,7 +123,7 @@ int read_all(int fd, char *buf, int nbytes) {
         //return 500
     }
     do {
-        bytes = read(fd, buf + total, nbytes - total);
+        bytes = read(fd, buf + total, 1);
         total += bytes;
     } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
     regfree(&re);
