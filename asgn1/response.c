@@ -196,7 +196,7 @@ struct response
     }
     }
     if (write_all(req, rsp, req.connfd) < 0) {
-            return status(rsp, 500);
+        return status(rsp, 500);
     }
 
     return status(rsp, s);
@@ -225,10 +225,9 @@ struct response
         return status(rsp, 404);
     }
     }
-    
 
     if (write_all(req, rsp, req.connfd) < 0) {
-            return status(rsp, 500);
+        return status(rsp, 500);
     }
 
     return status(rsp, 200);
