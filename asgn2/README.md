@@ -108,7 +108,7 @@ This function is used to finalize the response formatting. It takes in a respons
 ### send_response()
 Finishes formatting the response and sends the output to the socket. Upon a successful GET request, the body of the provided file will be written after the response line.
 
-### finish_writing()
+### write_all()
 
 This writes all of the bytes within the Content-Length's specifications to a file from the socket. This allows the program to avoid using an unnecessarily large buffer to store the contents before hand. It reads and writes at most 4096 bytes at a time, and stops once the client halts the connection.
 
@@ -119,20 +119,29 @@ I implemented some new small features to accomodate a logging system. This allow
 
         <Oper>,<URI>,<Status-Code>,<RequestID header value>\n
     
-To do this, I used the predined LOG macro, which calls fprintf to the specified log file (defaults to stderr). The command line arguments are read in before the connection with the port is setup and the user has the option to run it with the -l flag, which is used to specify which file to flush the log to. 
+To do this, I used the predefined LOG macro, which calls fprintf to the specified log file (defaults to stderr). The command line arguments are read in before the connection with the port is setup and the user has the option to run it with the -l flag, which is used to specify which file to flush the log to. 
 
 As for Request-Id, I searched for the Request-Id header in my linked list and saved it as the requests Id number if it was found. Otherwise, it just defaults as 0.
 
 If the request is valid, it will be added to the logfile.
 
+### New write_all()
+
+I had some time to clean up some of the parts of asgn1 that I wasn't proud of, so I changed finish_writing() into write_all(). This allows me to abstract the process of reading bytes from connfd and writing to the request's URI. It returns the number of bytes written, and if there are any errors in reading/writing, it will response with a 500 code.
+
+### Cleaner handle_connection()
+
+I made some serious changes to how handle_connection() is modularized. I desinged it so that it only calls functions, and doesn't do any of the reading/writing itself. I put read_all() in my parsing function, and write_all() in the PUT and APPEND functions where it is more relevant. This allows me to narrow down bugs more easily and reduces complexity within the function itself.
 
 ## Reflection
 
-This assignment was a doozy. I've spent more time on this than any other project I've had to work on in the past. That being said, I found it to be incredibly insightful and rewarding. I took Dr. Quinn's advice and approached this with a mix between "Top-Down" and "Bottom-Up" modularity, and found success in this. I was able to explore the requirements of the task and put together the modules as I went.
+Assignment 1 was a doozy. I've spent more time on this than any other project I've had to work on in the past. That being said, I found it to be incredibly insightful and rewarding. I took Dr. Quinn's advice and approached this with a mix between "Top-Down" and "Bottom-Up" modularity, and found success in this. I was able to explore the requirements of the task and put together the modules as I went.
 
 I started with parsing, and came up with a very broken solution after a little while of playing around with it. It read the request one character at a time and tried to format the request like that. It worked for a while, but struggled with invalid requests. I was able to get my other functions working pretty well with it, but once I finished them, I went back and redid the whole module using REGEX. This made my life so much easier, as it was able to check for invalidity very easily. Since I already had the other modules in place, it was incredibly easy to swap the old one for the new one.
 
 I ended up learning to use Shell Script and came up with 53 tests validate my program. It runs each test against the output of the resource binary, and eventually I was able to use this to pass all 53. This was extremely nice for finding where bugs were coming from, and I will definitely use this strategy in the future.
+
+In Assignment 2, I did some cleaning to allow for better modularity and clearer code. The core task didn't take too long to implement, as most of the work had already been done is Assignment 1. I went back and changed how I was reading to pass all of the tests in asgn1, and this helped my performance in asgn2 significantly.
 
 ## Collaboration
 In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the asgn1-general discord, and spoke to tutors and TAs about problems/ideas for my implementation. I also used Eugene's read_all() and part of write_all() that he gave us. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.

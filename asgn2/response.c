@@ -23,6 +23,40 @@
 #include "helper.h"
 #include "list.h"
 
+int write_all(struct request req, struct response rsp, int fd) {
+    int total_written;
+    //flushes the body that was read in with the request
+    if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
+        return -1;
+    }
+
+    int bytes = 4096;
+    int size = 0;
+    char *buf = (char *) calloc(1, sizeof(char) * bytes);
+    int bytes_written = 0;
+
+    int read_bytes
+        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    do {
+        if ((size = read(fd, buf, read_bytes)) < 0) {
+            free(
+                buf); // watch for potential issues that may arise from bytes still being in connfd after an error
+            return -1;
+        }
+        if ((bytes_written = write(rsp.fd, buf, size)) < 0) {
+            free(buf);
+            return -1;
+        }
+        total_written += bytes_written;
+        req.body_read += size;
+        read_bytes
+            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
+    } while (size > 0 && req.body_read < req.body_size);
+    free(buf);
+
+    return total_written;
+}
+
 //takes a rsp and an error code and formats the response appropriately
 
 struct response status(struct response rsp, int error_code) {
@@ -162,7 +196,9 @@ struct response
     }
     }
 
-    rsp.finish_writing = 1;
+    if (write_all(req, rsp, req.connfd) < 0) {
+        return status(rsp, 500);
+    }
 
     return status(rsp, s);
 }
@@ -191,7 +227,9 @@ struct response
     }
     }
 
-    rsp.finish_writing = 1;
+    if (write_all(req, rsp, req.connfd) < 0) {
+        return status(rsp, 500);
+    }
 
     return status(rsp, 200);
 }
@@ -228,7 +266,6 @@ struct response new_response() {
     rsp.content_set = 0;
     rsp.fd = -1;
     rsp.headers = create_node(0, 0);
-    rsp.finish_writing = 0;
     return rsp;
 }
 

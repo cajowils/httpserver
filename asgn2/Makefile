@@ -1,14 +1,14 @@
-CFLAGS=-Wall -Wextra -Werror -pedantic -g
+CFLAGS=-Wall -Wextra -Werror -pedantic
 CC=clang $(CFLAGS)
 
 httpserver:		httpserver.o requests.o response.o helper.o list.o
 				$(CC) -o httpserver httpserver.o requests.o response.o helper.o list.o
 httpserver.o:	requests.h response.h helper.h list.h httpserver.c
 				$(CC) -c httpserver.c
-requests.o:		requests.h helper.h list.h requests.c
-				$(CC) -c requests.c
-response.o:		response.h requests.h helper.h list.h response.c
-				$(CC) -c response.c
+requests.o:		requests.h helper.h list.h requests.c httpserver.c
+				$(CC) -c requests.c httpserver.c
+response.o:		response.h requests.h helper.h list.h response.c httpserver.c
+				$(CC) -c response.c httpserver.c
 helper.o:		helper.h helper.c
 				$(CC) -c helper.c
 list.o:			list.h list.c
