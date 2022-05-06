@@ -161,6 +161,7 @@ struct response
         warnx("PUT error");
     }
     }
+    rsp.finish_writing = 1;
 
     return status(rsp, s);
 }
@@ -188,7 +189,7 @@ struct response
         return status(rsp, 404);
     }
     }
-
+    rsp.finish_writing = 1;
 
     return status(rsp, 200);
 }
@@ -225,6 +226,7 @@ struct response new_response() {
     rsp.content_set = 0;
     rsp.fd = -1;
     rsp.headers = create_node(0, 0);
+    rsp.finish_writing = 0;
     return rsp;
 }
 

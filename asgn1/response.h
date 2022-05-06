@@ -16,6 +16,7 @@ struct response {
     int num_headers;
     int mode;
     int content_set;
+    int finish_writing;
 };
 
 struct response status(struct response rsp, int error_code);
