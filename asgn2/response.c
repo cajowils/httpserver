@@ -228,6 +228,7 @@ struct response new_response() {
     rsp.content_set = 0;
     rsp.fd = -1;
     rsp.headers = create_node(0, 0);
+    rsp.finish_writing = 0;
     return rsp;
 }
 
