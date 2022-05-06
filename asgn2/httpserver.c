@@ -118,24 +118,38 @@ static int create_listen_socket(uint16_t port) {
     } while (bytes_read > 0);
 }*/
 
-void finish_writing(struct request req, struct response rsp, int fd) {
+int write_all(struct request req, struct response rsp, int fd) {
+    int total_written;
+    //flushes the body that was read in with the request
+    if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
+        return -1;
+    }
+
     int bytes = 4096;
     int size = 0;
     char *buf = (char *) calloc(1, sizeof(char) * bytes);
     int bytes_written = 0;
+    
 
     int read_bytes
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
-        size = read(fd, buf, read_bytes);
-        bytes_written = write(rsp.fd, buf, size);
+        if ((size = read(fd, buf, read_bytes)) < 0) {
+            free(buf); // watch for potential issues that may arise from bytes still being in connfd after an error
+            return -1;
+        }
+        if ((bytes_written = write(rsp.fd, buf, size)) < 0) {
+            free(buf);
+            return -1;
+        }
+        total_written += bytes_written;
         req.body_read += size;
         read_bytes
             = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     } while (size > 0 && req.body_read < req.body_size);
     free(buf);
 
-    return;
+    return total_written;
 }
 
 int read_all(int fd, char *buf, int nbytes) {
@@ -168,7 +182,9 @@ void handle_connection(int connfd) {
     if ((rsp.line.code == 200 || rsp.line.code == 201)
         && (req.mode == 1
             || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
-        finish_writing(req, rsp, connfd);
+        if (write_all(req, rsp, connfd) < 0) {
+            rsp = status(rsp, 500);
+        }
     }
 
     send_response(rsp, connfd);
