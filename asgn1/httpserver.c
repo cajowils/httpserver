@@ -93,80 +93,15 @@ int create_listen_socket(uint16_t port) {
     return listenfd;
 }
 
-int write_all(struct request req, struct response rsp, int fd) {
-    int total_written;
-    //flushes the body that was read in with the request
-    if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
-        return -1;
-    }
-
-    int bytes = 4096;
-    int size = 0;
-    char *buf = (char *) calloc(1, sizeof(char) * bytes);
-    int bytes_written = 0;
-
-    int read_bytes
-        = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    do {
-        if ((size = read(fd, buf, read_bytes)) < 0) {
-            free(
-                buf); // watch for potential issues that may arise from bytes still being in connfd after an error
-            return -1;
-        }
-        if ((bytes_written = write(rsp.fd, buf, size)) < 0) {
-            free(buf);
-            return -1;
-        }
-        total_written += bytes_written;
-        req.body_read += size;
-        read_bytes
-            = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
-    } while (size > 0 && req.body_read < req.body_size);
-    free(buf);
-
-    return total_written;
-}
-
-int read_all(int fd, char *buf, int nbytes) {
-    int total = 0;
-    int bytes = 0;
-    const char *pattern = "\r\n\r\n";
-    regex_t re;
-    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
-        bytes = 0;
-        //return 500
-    }
-    do {
-        bytes = read(fd, buf + total, 1);
-        total += bytes;
-    } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
-    regfree(&re);
-    return total;
-}
-
 void handle_connection(int connfd) {
-    int bytes = 2048;
-    char *r = (char *) calloc(1, sizeof(char) * bytes);
-    int size = read_all(connfd, r, bytes);
-
     // parse the buffer for all of the request information and put it in a request struct
-    struct request req = parse_request_regex(r, size);
+    struct request req = parse_request_regex(connfd);
 
     //process the request and format it into a response
-    req.connfd = connfd;
     struct response rsp = process_request(req);
-
-    //if it is a successful PUT or APPEND, finish writing to the file
-
-    /*if (rsp.finish_writing) {
-        if (write_all(req, rsp, connfd) < 0) {
-            rsp = status(rsp, 500);
-        }
-    }*/
 
     send_response(rsp, connfd);
 
-    free(r);
     delete_request(req);
     delete_response(rsp);
     return;

@@ -4,12 +4,45 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdint.h>
+
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "requests.h"
 #include "helper.h"
 #include "list.h"
 
-struct request parse_request_regex(char *r, int size) {
+int read_all(int fd, char *buf, int nbytes) {
+    int total = 0;
+    int bytes = 0;
+    const char *pattern = "\r\n\r\n";
+    regex_t re;
+    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
+        bytes = 0;
+        //return 500
+    }
+    do {
+        bytes = read(fd, buf + total, 1);
+        total += bytes;
+    } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
+    regfree(&re);
+    return total;
+}
+
+struct request parse_request_regex(int connfd) {
+    int bytes = 2048;
+    char *r = (char *) calloc(1, sizeof(char) * bytes);
+    int size = read_all(connfd, r, bytes);
+
     struct request req = new_request();
+    req.connfd = connfd;
 
     if (size < 1) {
         req.error = 400;

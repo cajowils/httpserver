@@ -21,7 +21,9 @@ struct request {
     int connfd;
 };
 
-struct request parse_request_regex(char *r, int size);
+int read_all(int fd, char *buf, int nbytes);
+
+struct request parse_request_regex(int connfd);
 
 struct request new_request();
 
