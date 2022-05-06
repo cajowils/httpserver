@@ -23,8 +23,6 @@
 #include "helper.h"
 #include "list.h"
 
-//takes a rsp and an error code and formats the response appropriately
-
 int write_all(struct request req, struct response rsp, int fd) {
     int total_written;
     //flushes the body that was read in with the request
@@ -41,8 +39,8 @@ int write_all(struct request req, struct response rsp, int fd) {
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
         if ((size = read(fd, buf, read_bytes)) < 0) {
-            free(
-                buf); // watch for potential issues that may arise from bytes still being in connfd after an error
+            free(buf);
+            // watch for potential issues that may arise from bytes still being in connfd after an error
             return -1;
         }
         if ((bytes_written = write(rsp.fd, buf, size)) < 0) {
@@ -58,6 +56,7 @@ int write_all(struct request req, struct response rsp, int fd) {
 
     return total_written;
 }
+//takes a rsp and an error code and formats the response appropriately
 
 struct response status(struct response rsp, int error_code) {
     rsp.line.code = error_code;

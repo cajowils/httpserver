@@ -26,7 +26,8 @@ int read_all(int fd, char *buf, int nbytes) {
     regex_t re;
     if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
         bytes = 0;
-        //return 500
+        regfree(&re);
+        return -1;
     }
     do {
         bytes = read(fd, buf + total, 1);
@@ -43,6 +44,12 @@ struct request parse_request_regex(int connfd) {
 
     struct request req = new_request();
     req.connfd = connfd;
+
+    if (size < 0) {
+        req.error = 500;
+        free(r);
+        return req;
+    }
 
     if (size < 1) {
         req.error = 400;
