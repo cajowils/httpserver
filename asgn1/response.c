@@ -25,6 +25,8 @@
 
 //takes a rsp and an error code and formats the response appropriately
 
+int write_all(struct request req, struct response rsp, int fd);
+
 struct response status(struct response rsp, int error_code) {
     rsp.line.code = error_code;
     rsp.line.phrase = (char *) calloc(1, sizeof(char) * 50);
@@ -161,7 +163,9 @@ struct response
         warnx("PUT error");
     }
     }
-    rsp.finish_writing = 1;
+    if (write_all(req, rsp, req.connfd) < 0) {
+            return status(rsp, 500);
+    }
 
     return status(rsp, s);
 }
@@ -189,7 +193,11 @@ struct response
         return status(rsp, 404);
     }
     }
-    rsp.finish_writing = 1;
+    
+
+    if (write_all(req, rsp, req.connfd) < 0) {
+            return status(rsp, 500);
+    }
 
     return status(rsp, 200);
 }

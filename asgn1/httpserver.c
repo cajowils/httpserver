@@ -153,15 +153,16 @@ void handle_connection(int connfd) {
     struct request req = parse_request_regex(r, size);
 
     //process the request and format it into a response
+    req.connfd = connfd;
     struct response rsp = process_request(req);
 
     //if it is a successful PUT or APPEND, finish writing to the file
 
-    if (rsp.finish_writing) {
+    /*if (rsp.finish_writing) {
         if (write_all(req, rsp, connfd) < 0) {
             rsp = status(rsp, 500);
         }
-    }
+    }*/
 
     send_response(rsp, connfd);
 

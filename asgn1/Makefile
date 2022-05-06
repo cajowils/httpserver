@@ -7,8 +7,8 @@ httpserver.o:	requests.h response.h helper.h list.h httpserver.c
 				$(CC) -c httpserver.c
 requests.o:		requests.h helper.h list.h requests.c
 				$(CC) -c requests.c
-response.o:		response.h requests.h helper.h list.h response.c
-				$(CC) -c response.c
+response.o:		response.h requests.h helper.h list.h response.c httpserver.c
+				$(CC) -c response.c httpserver.c
 helper.o:		helper.h helper.c
 				$(CC) -c helper.c
 list.o:			list.h list.c
