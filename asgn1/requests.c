@@ -46,6 +46,7 @@ struct request parse_request_regex(int connfd) {
 
     if (size < 1) {
         req.error = 400;
+        free(r);
         return req;
     }
 
@@ -56,6 +57,7 @@ struct request parse_request_regex(int connfd) {
     regex_t re;
     if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
         req.error = 500;
+        free(r);
         return req;
     }
 
@@ -90,6 +92,7 @@ struct request parse_request_regex(int connfd) {
                 num_groups = i;
                 if (i < 5) {
                     req.error = 400;
+                    free(r);
                     return req;
                 } else {
                     no_headers = 1;
@@ -117,6 +120,7 @@ struct request parse_request_regex(int connfd) {
             req.mode = 2;
         } else {
             req.error = 501;
+            free(r);
             return req;
         }
 
@@ -133,6 +137,7 @@ struct request parse_request_regex(int connfd) {
 
         if (strncmp(req.line.version, "HTTP/1.1", version_size) != 0) {
             req.error = 400;
+            free(r);
             return req;
         }
 
@@ -142,8 +147,8 @@ struct request parse_request_regex(int connfd) {
         }
 
     } else {
-
         req.error = 400;
+        free(r);
         return req;
     }
 
@@ -163,6 +168,7 @@ struct request parse_request_regex(int connfd) {
         if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
             free(headers);
             regfree(&h_re);
+            free(r);
             req.error = 500;
             return req;
         }
@@ -188,6 +194,7 @@ struct request parse_request_regex(int connfd) {
                     if (i < 3) {
                         free(headers);
                         regfree(&h_re);
+                        free(r);
                         req.error = 400;
                         return req;
                     }
@@ -232,15 +239,13 @@ struct request parse_request_regex(int connfd) {
     if (req.mode == 1 || req.mode == 2) {
         if (!content_found) { // need content-length header for PUT and APPEND requests
             req.error = 400;
-            return req;
+        } else {
+            req.body_read = size - body_start;
+            req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
+            strncpy(req.body, r + body_start, req.body_read);
         }
-
-        req.body_read = size - body_start;
-
-        req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
-        strncpy(req.body, r + body_start, req.body_read);
     }
-
+    free(r);
     return req;
 }
 
