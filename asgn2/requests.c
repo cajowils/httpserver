@@ -194,8 +194,7 @@ struct request parse_request_regex(char *r, int size) {
                     if (ID > 0) {
                         req.ID = ID;
                     }
-                }
-                else {
+                } else {
                     req.error = 400;
                     free(headers);
                     regfree(&h_re);
@@ -214,7 +213,7 @@ struct request parse_request_regex(char *r, int size) {
             req.error = 400;
             return req;
         }
-    
+
         req.body_read = size - body_start;
 
         req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;

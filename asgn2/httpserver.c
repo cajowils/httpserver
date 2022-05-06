@@ -17,7 +17,6 @@
 #include "helper.h"
 #include "list.h"
 
-
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
 #define DEFAULT_THREAD_COUNT 4
