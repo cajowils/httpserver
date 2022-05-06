@@ -129,13 +129,13 @@ int write_all(struct request req, struct response rsp, int fd) {
     int size = 0;
     char *buf = (char *) calloc(1, sizeof(char) * bytes);
     int bytes_written = 0;
-    
 
     int read_bytes
         = (req.body_size - req.body_read > bytes) ? bytes : req.body_size - req.body_read;
     do {
         if ((size = read(fd, buf, read_bytes)) < 0) {
-            free(buf); // watch for potential issues that may arise from bytes still being in connfd after an error
+            free(
+                buf); // watch for potential issues that may arise from bytes still being in connfd after an error
             return -1;
         }
         if ((bytes_written = write(rsp.fd, buf, size)) < 0) {
@@ -179,14 +179,13 @@ void handle_connection(int connfd) {
 
     //process the request and format it into a response
     struct response rsp = process_request(req);
-    if ((rsp.line.code == 200 || rsp.line.code == 201)
-        && (req.mode == 1
-            || req.mode == 2)) { //if it is a successful PUT or APPEND, finish writing to the file
+
+    //if it is a successful PUT or APPEND, finish writing to the file
+    if (rsp.finish_writing) {
         if (write_all(req, rsp, connfd) < 0) {
             rsp = status(rsp, 500);
         }
     }
-
     send_response(rsp, connfd);
     if (req.line.method != NULL && req.line.URI != NULL) {
         LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);

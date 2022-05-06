@@ -16,6 +16,7 @@ struct response {
     int num_headers;
     int mode;
     int content_set;
+    int finish_writing;
 };
 
 int write_all(struct request req, struct response rsp, int fd);

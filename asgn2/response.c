@@ -162,6 +162,8 @@ struct response
     }
     }
 
+    rsp.finish_writing = 1;
+
     return status(rsp, s);
 }
 
@@ -189,6 +191,7 @@ struct response
     }
     }
 
+    rsp.finish_writing = 1;
 
     return status(rsp, 200);
 }
