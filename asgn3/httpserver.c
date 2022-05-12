@@ -17,7 +17,7 @@
 #include "response.h"
 #include "helper.h"
 #include "list.h"
-#include "queue.c"
+#include "queue.h"
 
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
@@ -136,12 +136,15 @@ void send_job(Queue *q, int connfd) {
     pthread_cond_signal(&queue_cond);
 }
 
-void *handle_thread() {
+void *handle_thread(void *queue) {
+    Queue *q = queue;
     for(;;) {
+        printf("size: %d\n", q->size);
         int connfd;
         pthread_mutex_lock(&queue_mutex);
         pthread_cond_wait(&queue_cond, &queue_mutex);
         connfd = dequeue(q);
+        printf("connfd: %d\n",connfd);
         pthread_mutex_unlock(&queue_mutex);
         handle_connection(connfd);
     }
@@ -193,8 +196,10 @@ int main(int argc, char *argv[]) {
 
     Queue *q = create_queue();
 
+
+
     for (int i=0;i<num_threads;i++) {
-        pthread_create(&threads[i], NULL, handle_thread, NULL);
+        pthread_create(&threads[i], NULL, handle_thread, &q);
     }
 
 
