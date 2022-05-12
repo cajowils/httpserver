@@ -1,0 +1,10 @@
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
+GET,/tests/test3.txt,200,0
