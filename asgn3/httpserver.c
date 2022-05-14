@@ -137,14 +137,16 @@ void send_job(Queue *q, int connfd) {
 }
 
 void *handle_thread(void *queue) {
-    Queue *q = queue;
+    Queue *q = (struct Queue *)queue;
     for(;;) {
-        printf("size: %d\n", q->size);
         int connfd;
         pthread_mutex_lock(&queue_mutex);
-        pthread_cond_wait(&queue_cond, &queue_mutex);
+        //checks to see if there is anything in the queue
+        if (peek(q) == -1) {
+            pthread_cond_wait(&queue_cond, &queue_mutex);
+        }
+        //grabs the first item in the queue
         connfd = dequeue(q);
-        printf("connfd: %d\n",connfd);
         pthread_mutex_unlock(&queue_mutex);
         handle_connection(connfd);
     }
@@ -199,7 +201,7 @@ int main(int argc, char *argv[]) {
 
 
     for (int i=0;i<num_threads;i++) {
-        pthread_create(&threads[i], NULL, handle_thread, &q);
+        pthread_create(&threads[i], NULL, handle_thread, (void*) q);
     }
 
 

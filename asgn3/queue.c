@@ -22,11 +22,12 @@ void enqueue(Queue *q, int val) {
         q->tail = q->head;
     }
     q->size++;
+    //print_queue(q);
     return;
 }
 
 int dequeue(Queue *q) {
-    if (q->size <= 0) {
+    if (q->size <= 0 || !q->head) {
         return -1;
     }
     int val = q->head->val;
@@ -40,22 +41,30 @@ int dequeue(Queue *q) {
         q->tail = NULL;
         q->head = NULL;
     }
+    //print_queue(q);
     return val;
 }
 
+int peek(Queue *q) {
+    if (q->size <= 0 || !q->head) {
+        return -1;
+    }
+    return q->head->val;
+}
+
 void delete_queue(Queue *q) {
-    printf("deleting queue\n");
     if (q) {
         if (q->head) {
             QueueNode *ptr = q->head;
             QueueNode *next;
             do {
-                printf("deleting node: %d\n", ptr->val);
                 next = ptr->next;
                 delete_queue_node(ptr);
                 ptr = next;
             } while (next != NULL);
         }
+        q->tail = NULL;
+        q->head = NULL;
         q=NULL;
         free(q);
     }
@@ -80,7 +89,7 @@ void print_queue(Queue *q) {
 
 testqueue:		queue.o list.o
 				$(CC) -o testqueue queue.o list.o
-                
+
 int main() {
     //time_t t;
     //srand((unsigned) time(&t));
