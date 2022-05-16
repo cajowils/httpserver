@@ -18,6 +18,7 @@
 #include "helper.h"
 #include "list.h"
 #include "queue.h"
+#include "pool.h"
 
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
@@ -26,9 +27,9 @@
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
 
+Pool p;
 
-pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+
 
 
 void send_response(struct response rsp, int connfd) {
@@ -120,6 +121,13 @@ void handle_connection(int connfd) {
 static void sigterm_handler(int sig) {
     if (sig == SIGTERM) {
         warnx("received SIGTERM");
+        cleanup_pool(&p);
+        fclose(logfile);
+        exit(EXIT_SUCCESS);
+    }
+    if (sig == SIGINT) {
+        warnx("received SIGINT");
+        cleanup_pool(&p);
         fclose(logfile);
         exit(EXIT_SUCCESS);
     }
@@ -129,27 +137,29 @@ static void usage(char *exec) {
     fprintf(stderr, "usage: %s [-t threads] [-l logfile] <port>\n", exec);
 }
 
-void send_job(Queue *q, int connfd) {
-    pthread_mutex_lock(&queue_mutex);
-    enqueue(q, connfd);
-    pthread_mutex_unlock(&queue_mutex);
-    pthread_cond_signal(&queue_cond);
+void send_job(int connfd) {
+    pthread_mutex_lock(&p.mutex);
+    enqueue(p.queue, connfd);
+    pthread_mutex_unlock(&p.mutex);
+    pthread_cond_signal(&p.cond);
 }
 
-void *handle_thread(void *queue) {
-    Queue *q = (struct Queue *)queue;
-    for(;;) {
+void *handle_thread() {
+    while (p.running) {
         int connfd;
-        pthread_mutex_lock(&queue_mutex);
+        pthread_mutex_lock(&p.mutex);
         //checks to see if there is anything in the queue
-        if (peek(q) == -1) {
-            pthread_cond_wait(&queue_cond, &queue_mutex);
+        if (peek(p.queue) == -1) {
+            pthread_cond_wait(&p.cond, &p.mutex);
         }
         //grabs the first item in the queue
-        connfd = dequeue(q);
-        pthread_mutex_unlock(&queue_mutex);
-        handle_connection(connfd);
+        connfd = dequeue(p.queue);
+        pthread_mutex_unlock(&p.mutex);
+        if (connfd >=0) {
+            handle_connection(connfd);
+        }
     }
+    return NULL;
 }
 
 
@@ -189,20 +199,23 @@ int main(int argc, char *argv[]) {
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGTERM, sigterm_handler);
+    signal(SIGINT, sigterm_handler);
 
     int listenfd = create_listen_socket(port);
 
-    pthread_t threads[num_threads];
-    pthread_mutex_init(&queue_mutex, NULL);
-    pthread_cond_init(&queue_cond, NULL);
+    //pthread_t threads[num_threads];
 
-    Queue *q = create_queue();
+    //Queue *q = create_queue();
 
-
-
+    initialze_pool(&p, num_threads);
+    
     for (int i=0;i<num_threads;i++) {
-        pthread_create(&threads[i], NULL, handle_thread, (void*) q);
+        pthread_create(&p.threads[i], NULL, handle_thread, NULL);
     }
+
+    /*for (int i=0;i<num_threads;i++) {
+        pthread_create(&threads[i], NULL, handle_thread, (void*) q);
+    }*/
 
 
     for (;;) {
@@ -211,7 +224,7 @@ int main(int argc, char *argv[]) {
             warn("accept error");
             continue;
         }
-        send_job(q, connfd);
+        send_job(connfd);
     }
 
     return EXIT_SUCCESS;

@@ -59,8 +59,8 @@ void delete_queue_node(QueueNode *qn) {
         }
         qn->next = NULL;
         qn->prev = NULL;
-        qn = NULL;
         free(qn);
+        qn = NULL;
     }
     return;
 }

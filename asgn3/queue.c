@@ -65,8 +65,8 @@ void delete_queue(Queue *q) {
         }
         q->tail = NULL;
         q->head = NULL;
-        q=NULL;
         free(q);
+        q=NULL;
     }
     
 }
