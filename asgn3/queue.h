@@ -5,7 +5,7 @@
 
 typedef struct Queue Queue;
 
-struct Queue{
+struct Queue {
     QueueNode *head;
     QueueNode *tail;
     int size;
@@ -22,6 +22,5 @@ int peek(Queue *q);
 void delete_queue(Queue *q);
 
 void print_queue(Queue *q);
-
 
 #endif

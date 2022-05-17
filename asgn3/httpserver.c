@@ -29,9 +29,6 @@ static FILE *logfile;
 
 Pool p;
 
-
-
-
 void send_response(struct response rsp, int connfd) {
 
     int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
@@ -121,13 +118,13 @@ void handle_connection(int connfd) {
 static void sigterm_handler(int sig) {
     if (sig == SIGTERM) {
         warnx("received SIGTERM");
-        cleanup_pool(&p);
+        destruct_pool(&p);
         fclose(logfile);
         exit(EXIT_SUCCESS);
     }
     if (sig == SIGINT) {
         warnx("received SIGINT");
-        cleanup_pool(&p);
+        destruct_pool(&p);
         fclose(logfile);
         exit(EXIT_SUCCESS);
     }
@@ -137,7 +134,7 @@ static void usage(char *exec) {
     fprintf(stderr, "usage: %s [-t threads] [-l logfile] <port>\n", exec);
 }
 
-void send_job(int connfd) {
+void queue_job(int connfd) {
     pthread_mutex_lock(&p.mutex);
     enqueue(p.queue, connfd);
     pthread_mutex_unlock(&p.mutex);
@@ -155,13 +152,12 @@ void *handle_thread() {
         //grabs the first item in the queue
         connfd = dequeue(p.queue);
         pthread_mutex_unlock(&p.mutex);
-        if (connfd >=0) {
+        if (connfd >= 0) {
             handle_connection(connfd);
         }
     }
     return NULL;
 }
-
 
 int main(int argc, char *argv[]) {
     int opt = 0;
@@ -203,20 +199,11 @@ int main(int argc, char *argv[]) {
 
     int listenfd = create_listen_socket(port);
 
-    //pthread_t threads[num_threads];
-
-    //Queue *q = create_queue();
-
     initialze_pool(&p, num_threads);
-    
-    for (int i=0;i<num_threads;i++) {
+
+    for (int i = 0; i < num_threads; i++) {
         pthread_create(&p.threads[i], NULL, handle_thread, NULL);
     }
-
-    /*for (int i=0;i<num_threads;i++) {
-        pthread_create(&threads[i], NULL, handle_thread, (void*) q);
-    }*/
-
 
     for (;;) {
         int connfd = accept(listenfd, NULL, NULL);
@@ -224,7 +211,7 @@ int main(int argc, char *argv[]) {
             warn("accept error");
             continue;
         }
-        send_job(connfd);
+        queue_job(connfd);
     }
 
     return EXIT_SUCCESS;

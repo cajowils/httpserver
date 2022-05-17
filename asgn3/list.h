@@ -15,7 +15,6 @@ void delete_node(Node *n);
 
 void delete_list(Node *head);
 
-
 typedef struct QueueNode QueueNode;
 
 struct QueueNode {

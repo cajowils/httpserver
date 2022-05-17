@@ -13,11 +13,10 @@ struct Pool {
     pthread_t *threads;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-
 };
 
 void initialze_pool(Pool *p, int num_threads);
 
-void cleanup_pool(Pool *p);
+void destruct_pool(Pool *p);
 
 #endif

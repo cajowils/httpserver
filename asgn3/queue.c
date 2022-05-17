@@ -16,8 +16,7 @@ void enqueue(Queue *q, int val) {
     if (q->size > 0) {
         q->tail->next = create_queue_node(val);
         q->tail = q->tail->next;
-    }
-    else {
+    } else {
         q->head = create_queue_node(val);
         q->tail = q->head;
     }
@@ -66,9 +65,8 @@ void delete_queue(Queue *q) {
         q->tail = NULL;
         q->head = NULL;
         free(q);
-        q=NULL;
+        q = NULL;
     }
-    
 }
 
 void print_queue(Queue *q) {
