@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/file.h>
 #include <unistd.h>
 #include <regex.h>
 #include <pthread.h>
@@ -26,6 +27,7 @@
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
+pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 Pool p;
 
@@ -71,10 +73,12 @@ void send_response(struct response rsp, int connfd) {
 }
 
 void log_request(struct request req, struct response rsp) {
+    pthread_mutex_lock(&log_lock);
     if (req.line.method != NULL && req.line.URI != NULL) {
         LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
         fflush(logfile);
     }
+    pthread_mutex_unlock(&log_lock);
 }
 
 // Creates a socket for listening for connections.

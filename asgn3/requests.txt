@@ -1,1 +1,0 @@
-"GET tests/test2.txt HTTP/1.1\r\n\r\n"

@@ -2,7 +2,7 @@ CFLAGS=-Wall -Wextra -Werror -pedantic -g
 CC=clang $(CFLAGS)
 
 httpserver:		httpserver.o requests.o response.o helper.o queue.o list.o pool.o
-				$(CC) -o httpserver httpserver.o requests.o response.o helper.o queue.o list.o pool.o -lpthread
+				$(CC) -o httpserver httpserver.o requests.o response.o helper.o queue.o list.o pool.o -pthread
 httpserver.o:	requests.h response.h helper.h list.h httpserver.c
 				$(CC) -c httpserver.c
 requests.o:		requests.h helper.h list.h requests.c httpserver.c

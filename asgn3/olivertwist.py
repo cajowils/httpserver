@@ -57,9 +57,8 @@ class request():
 
         assert (len(self.bytez) == 3)
 
-
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((hostname, port))
+        self.sock.connect((socket.gethostbyname(hostname), port))
         self.state = Req_State.CONNECTED
 
         self.rid = rid
@@ -133,7 +132,7 @@ class request():
 def argparser():
     parser = argparse.ArgumentParser(description="Issues a batch of requests.")
     parser.add_argument(
-        "-o", "--hostname", type=str,
+        "-o", "--hostname", type=str, default="localhost",
         metavar="localhost", help="Hostname to connect to."
     )
     parser.add_argument(
