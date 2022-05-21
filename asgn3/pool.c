@@ -4,14 +4,16 @@
 
 #include "pool.h"
 
-void initialze_pool(Pool *p, int num_threads) {
+void initialze_pool(Pool *p, int num_threads, int queue_size) {
     p->running = 1;
-    p->queue = create_queue();
+    p->queue = create_queue(queue_size);
     p->num_threads = num_threads;
     p->threads = (pthread_t *) malloc(sizeof(pthread_t) * num_threads);
 
     pthread_mutex_init(&p->mutex, NULL);
     pthread_cond_init(&p->cond, NULL);
+    pthread_cond_init(&p->full, NULL);
+
 
     return;
 }

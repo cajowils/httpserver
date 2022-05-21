@@ -9,9 +9,10 @@ struct Queue {
     QueueNode *head;
     QueueNode *tail;
     int size;
+    int capacity;
 };
 
-Queue *create_queue();
+Queue *create_queue(int capacity);
 
 void enqueue(Queue *q, int val);
 

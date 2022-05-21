@@ -4,11 +4,12 @@
 #include "list.h"
 #include "queue.h"
 
-Queue *create_queue() {
+Queue *create_queue(int capacity) {
     Queue *q = malloc(sizeof(Queue));
     q->head = NULL;
     q->tail = NULL;
     q->size = 0;
+    q->capacity = capacity;
     return q;
 }
 

@@ -24,6 +24,7 @@
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
 #define DEFAULT_THREAD_COUNT 4
+#define MAX_QUEUE_SIZE 128
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
@@ -73,12 +74,12 @@ void send_response(struct response rsp, int connfd) {
 }
 
 void log_request(struct request req, struct response rsp) {
-    pthread_mutex_lock(&log_lock);
+    //pthread_mutex_lock(&log_lock);
     if (req.line.method != NULL && req.line.URI != NULL) {
         LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
         fflush(logfile);
     }
-    pthread_mutex_unlock(&log_lock);
+    //pthread_mutex_unlock(&log_lock);
 }
 
 // Creates a socket for listening for connections.
@@ -140,6 +141,9 @@ static void usage(char *exec) {
 
 void queue_job(int connfd) {
     pthread_mutex_lock(&p.mutex);
+    while (p.queue->size == p.queue->capacity) {
+        pthread_cond_wait(&p.full, &p.mutex);
+    }
     enqueue(p.queue, connfd);
     pthread_mutex_unlock(&p.mutex);
     pthread_cond_signal(&p.cond);
@@ -155,6 +159,7 @@ void *handle_thread() {
         }
         //grabs the first item in the queue
         connfd = dequeue(p.queue);
+        pthread_cond_signal(&p.full);
         pthread_mutex_unlock(&p.mutex);
         if (connfd >= 0) {
             handle_connection(connfd);
@@ -202,8 +207,9 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, sigterm_handler);
 
     int listenfd = create_listen_socket(port);
+    //fcntl(listenfd, F_SETFL, O_NONBLOCK);
 
-    initialze_pool(&p, num_threads);
+    initialze_pool(&p, num_threads, MAX_QUEUE_SIZE);
 
     for (int i = 0; i < num_threads; i++) {
         pthread_create(&p.threads[i], NULL, handle_thread, NULL);
@@ -215,7 +221,9 @@ int main(int argc, char *argv[]) {
             warn("accept error");
             continue;
         }
-        queue_job(connfd);
+        if (connfd >= 0) {
+            queue_job(connfd);
+        }
     }
 
     return EXIT_SUCCESS;
