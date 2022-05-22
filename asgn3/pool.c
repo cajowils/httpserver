@@ -14,19 +14,18 @@ void initialze_pool(Pool *p, int num_threads, int queue_size) {
     pthread_cond_init(&p->cond, NULL);
     pthread_cond_init(&p->full, NULL);
 
-
     return;
 }
 
 void destruct_pool(Pool *p) {
     p->running = 0;
-    delete_queue(p->queue);
     pthread_cond_broadcast(&p->cond);
 
     for (int i = 0; i < p->num_threads; i++) {
         pthread_join(p->threads[i], NULL);
     }
     free(p->threads);
+    delete_queue(p->queue);
 
     pthread_mutex_destroy(&p->mutex);
     pthread_cond_destroy(&p->cond);

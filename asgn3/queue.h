@@ -14,9 +14,9 @@ struct Queue {
 
 Queue *create_queue(int capacity);
 
-void enqueue(Queue *q, int val);
+void enqueue(Queue *q, QueueNode *qn);
 
-int dequeue(Queue *q);
+QueueNode *dequeue(Queue *q);
 
 int peek(Queue *q);
 

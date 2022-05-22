@@ -24,7 +24,7 @@
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
 #define DEFAULT_THREAD_COUNT 4
-#define MAX_QUEUE_SIZE 128
+#define MAX_QUEUE_SIZE       128
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
@@ -103,7 +103,8 @@ static int create_listen_socket(uint16_t port) {
     return listenfd;
 }
 
-void handle_connection(int connfd) {
+void handle_connection(QueueNode *qn) {
+    int connfd = qn->val;
     // parse the buffer for all of the request information and put it in a request struct
     struct request req = parse_request_regex(connfd);
 
@@ -117,6 +118,7 @@ void handle_connection(int connfd) {
     delete_request(req);
     delete_response(rsp);
     close(connfd);
+    delete_queue_node(qn);
     return;
 }
 
@@ -139,30 +141,35 @@ static void usage(char *exec) {
     fprintf(stderr, "usage: %s [-t threads] [-l logfile] <port>\n", exec);
 }
 
-void queue_job(int connfd) {
+void new_job(int connfd) {
+    QueueNode *tmp = create_queue_node(connfd);
     pthread_mutex_lock(&p.mutex);
     while (full(p.queue)) {
         pthread_cond_wait(&p.full, &p.mutex);
     }
-    enqueue(p.queue, connfd);
+    if (p.queue) {
+        enqueue(p.queue, tmp);
+    }
     pthread_mutex_unlock(&p.mutex);
     pthread_cond_signal(&p.cond);
 }
 
 void *handle_thread() {
     while (p.running) {
-        int connfd;
+        QueueNode *qn = NULL;
         pthread_mutex_lock(&p.mutex);
         //checks to see if there is anything in the queue
-        while (empty(p.queue)) {
+        if (empty(p.queue)) {
             pthread_cond_wait(&p.cond, &p.mutex);
         }
         //grabs the first item in the queue
-        connfd = dequeue(p.queue);
+        if (p.queue) {
+            qn = dequeue(p.queue);
+        }
         pthread_cond_signal(&p.full);
         pthread_mutex_unlock(&p.mutex);
-        if (connfd >= 0) {
-            handle_connection(connfd);
+        if (qn && qn->val >= 0) {
+            handle_connection(qn);
         }
     }
     return NULL;
@@ -222,7 +229,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         if (connfd >= 0) {
-            queue_job(connfd);
+            new_job(connfd);
         }
     }
 

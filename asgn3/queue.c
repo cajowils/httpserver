@@ -13,12 +13,12 @@ Queue *create_queue(int capacity) {
     return q;
 }
 
-void enqueue(Queue *q, int val) {
+void enqueue(Queue *q, QueueNode *qn) {
     if (q->size > 0) {
-        q->tail->next = create_queue_node(val);
+        q->tail->next = qn;
         q->tail = q->tail->next;
     } else {
-        q->head = create_queue_node(val);
+        q->head = qn;
         q->tail = q->head;
     }
     q->size++;
@@ -26,23 +26,21 @@ void enqueue(Queue *q, int val) {
     return;
 }
 
-int dequeue(Queue *q) {
+QueueNode *dequeue(Queue *q) {
     if (q->size <= 0 || !q->head) {
-        return -1;
+        return NULL;
     }
-    int val = q->head->val;
-    QueueNode *tmp = q->head;
+    QueueNode *qn = q->head;
     if (q->head->next) {
         q->head = q->head->next;
     }
-    delete_queue_node(tmp);
     q->size--;
     if (q->size == 0) {
         q->tail = NULL;
         q->head = NULL;
     }
     //print_queue(q);
-    return val;
+    return qn;
 }
 
 int peek(Queue *q) {
