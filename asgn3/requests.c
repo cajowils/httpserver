@@ -14,41 +14,16 @@
 #include "helper.h"
 #include "list.h"
 
-int read_all(int fd, char *buf, int nbytes) {
-    int total = 0;
-    int bytes = 0;
-    const char *pattern = "\r\n\r\n";
-    regex_t re;
-    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
-        bytes = 0;
-        regfree(&re);
-        return -1;
-    }
-    do {
-        bytes = read(fd, buf + total, 1);
-        total += bytes;
-    } while (bytes > 0 && total < nbytes && (regexec(&re, buf, 0, NULL, 0) != 0));
-    regfree(&re);
-    return total;
-}
-
-struct request parse_request_regex(int connfd) {
-    int bytes = 2048;
-    char *r = (char *) calloc(1, sizeof(char) * bytes);
-    int size = read_all(connfd, r, bytes);
-
+struct request parse_request_regex(char *r, int size) {
     struct request req = new_request();
-    req.connfd = connfd;
 
     if (size < 0) {
         req.error = 500;
-        free(r);
         return req;
     }
 
     if (size < 1) {
         req.error = 400;
-        free(r);
         return req;
     }
     const char *pattern
@@ -58,7 +33,6 @@ struct request parse_request_regex(int connfd) {
     regex_t re;
     if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
         req.error = 500;
-        free(r);
         return req;
     }
 
@@ -93,7 +67,6 @@ struct request parse_request_regex(int connfd) {
                 num_groups = i;
                 if (i < 5) {
                     req.error = 400;
-                    free(r);
                     return req;
                 } else {
                     no_headers = 1;
@@ -121,7 +94,6 @@ struct request parse_request_regex(int connfd) {
             req.mode = 2;
         } else {
             req.error = 501;
-            free(r);
             return req;
         }
 
@@ -138,7 +110,6 @@ struct request parse_request_regex(int connfd) {
 
         if (strncmp(req.line.version, "HTTP/1.1", version_size) != 0) {
             req.error = 400;
-            free(r);
             return req;
         }
 
@@ -148,7 +119,6 @@ struct request parse_request_regex(int connfd) {
         }
 
     } else {
-        free(r);
         req.error = 400;
         return req;
     }
@@ -169,7 +139,6 @@ struct request parse_request_regex(int connfd) {
         if (regcomp(&h_re, h_pattern, REG_EXTENDED) != 0) {
             free(headers);
             regfree(&h_re);
-            free(r);
             req.error = 500;
             return req;
         }
@@ -195,7 +164,6 @@ struct request parse_request_regex(int connfd) {
                     if (i < 3) {
                         free(headers);
                         regfree(&h_re);
-                        free(r);
                         req.error = 400;
                         return req;
                     }
@@ -248,7 +216,6 @@ struct request parse_request_regex(int connfd) {
             strncpy(req.body, r + body_start, req.body_read);
         }
     }
-    free(r);
     return req;
 }
 

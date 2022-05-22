@@ -25,12 +25,29 @@
 #define BUF_SIZE             4096
 #define DEFAULT_THREAD_COUNT 4
 #define MAX_QUEUE_SIZE       128
+#define REQUEST_LEN          2048
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
 pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 Pool p;
+
+int read_all(QueueNode *qn) {
+    int bytes = 0;
+    const char *pattern = "\r\n\r\n";
+    regex_t re;
+    if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
+        regfree(&re);
+        return -1;
+    }
+    do {
+        bytes = read(qn->val, qn->buf + qn->size, 1);
+        qn->size += bytes;
+    } while (bytes > 0 && qn->size < REQUEST_LEN && (regexec(&re, qn->buf, 0, NULL, 0) != 0));
+    regfree(&re);
+    return 1;
+}
 
 void send_response(struct response rsp, int connfd) {
 
@@ -106,7 +123,9 @@ static int create_listen_socket(uint16_t port) {
 void handle_connection(QueueNode *qn) {
     int connfd = qn->val;
     // parse the buffer for all of the request information and put it in a request struct
-    struct request req = parse_request_regex(connfd);
+    read_all(qn);
+    struct request req = parse_request_regex(qn->buf, qn->size);
+    req.connfd = connfd;
 
     //process the request and format it into a response
     struct response rsp = process_request(req);
