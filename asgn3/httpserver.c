@@ -99,27 +99,6 @@ void log_request(struct request req, struct response rsp) {
     //pthread_mutex_unlock(&log_lock);
 }
 
-// Creates a socket for listening for connections.
-// Closes the program and prints an error message on error.
-static int create_listen_socket(uint16_t port) {
-    struct sockaddr_in addr;
-    int listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenfd < 0) {
-        err(EXIT_FAILURE, "socket error");
-    }
-    memset(&addr, 0, sizeof addr);
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htons(INADDR_ANY);
-    addr.sin_port = htons(port);
-    if (bind(listenfd, (struct sockaddr *) &addr, sizeof addr) < 0) {
-        err(EXIT_FAILURE, "bind error");
-    }
-    if (listen(listenfd, 128) < 0) {
-        err(EXIT_FAILURE, "listen error");
-    }
-    return listenfd;
-}
-
 void handle_connection(QueueNode *qn) {
     int connfd = qn->val;
     // parse the buffer for all of the request information and put it in a request struct
@@ -136,41 +115,8 @@ void handle_connection(QueueNode *qn) {
 
     delete_request(req);
     delete_response(rsp);
-    close(connfd);
     delete_queue_node(qn);
     return;
-}
-
-static void sigterm_handler(int sig) {
-    if (sig == SIGTERM) {
-        warnx("received SIGTERM");
-        destruct_pool(&p);
-        fclose(logfile);
-        exit(EXIT_SUCCESS);
-    }
-    if (sig == SIGINT) {
-        warnx("received SIGINT");
-        destruct_pool(&p);
-        fclose(logfile);
-        exit(EXIT_SUCCESS);
-    }
-}
-
-static void usage(char *exec) {
-    fprintf(stderr, "usage: %s [-t threads] [-l logfile] <port>\n", exec);
-}
-
-void new_job(int connfd) {
-    QueueNode *tmp = create_queue_node(connfd);
-    pthread_mutex_lock(&p.mutex);
-    while (full(p.queue)) {
-        pthread_cond_wait(&p.full, &p.mutex);
-    }
-    if (p.queue) {
-        enqueue(p.queue, tmp);
-    }
-    pthread_mutex_unlock(&p.mutex);
-    pthread_cond_signal(&p.cond);
 }
 
 void *handle_thread() {
@@ -192,6 +138,59 @@ void *handle_thread() {
         }
     }
     return NULL;
+}
+
+void new_job(int connfd) {
+    QueueNode *tmp = create_queue_node(connfd);
+    pthread_mutex_lock(&p.mutex);
+    while (full(p.queue)) {
+        pthread_cond_wait(&p.full, &p.mutex);
+    }
+    if (p.queue) {
+        enqueue(p.queue, tmp);
+    }
+    pthread_mutex_unlock(&p.mutex);
+    pthread_cond_signal(&p.cond);
+}
+
+// Creates a socket for listening for connections.
+// Closes the program and prints an error message on error.
+static int create_listen_socket(uint16_t port) {
+    struct sockaddr_in addr;
+    int listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0) {
+        err(EXIT_FAILURE, "socket error");
+    }
+    memset(&addr, 0, sizeof addr);
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htons(INADDR_ANY);
+    addr.sin_port = htons(port);
+    if (bind(listenfd, (struct sockaddr *) &addr, sizeof addr) < 0) {
+        err(EXIT_FAILURE, "bind error");
+    }
+    if (listen(listenfd, 128) < 0) {
+        err(EXIT_FAILURE, "listen error");
+    }
+    return listenfd;
+}
+
+static void sigterm_handler(int sig) {
+    if (sig == SIGTERM) {
+        warnx("received SIGTERM");
+        destruct_pool(&p);
+        fclose(logfile);
+        exit(EXIT_SUCCESS);
+    }
+    if (sig == SIGINT) {
+        warnx("received SIGINT");
+        destruct_pool(&p);
+        fclose(logfile);
+        exit(EXIT_SUCCESS);
+    }
+}
+
+static void usage(char *exec) {
+    fprintf(stderr, "usage: %s [-t threads] [-l logfile] <port>\n", exec);
 }
 
 int main(int argc, char *argv[]) {

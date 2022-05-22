@@ -1,6 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/file.h>
+#include <unistd.h>
+
 #include "list.h"
 
 //Linked List
@@ -58,6 +65,9 @@ void delete_queue_node(QueueNode *qn) {
         }
         if (qn->prev) {
             qn->prev->next = qn->next;
+        }
+        if (qn->val >= 0) {
+            close(qn->val);
         }
         qn->next = NULL;
         qn->prev = NULL;
