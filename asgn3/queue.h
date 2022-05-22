@@ -24,4 +24,8 @@ void delete_queue(Queue *q);
 
 void print_queue(Queue *q);
 
+int full(Queue *q);
+
+int empty(Queue *q);
+
 #endif

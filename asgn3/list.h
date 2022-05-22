@@ -19,6 +19,8 @@ typedef struct QueueNode QueueNode;
 
 struct QueueNode {
     int val;
+    int size;
+    char *buf;
     QueueNode *next;
     QueueNode *prev;
 };

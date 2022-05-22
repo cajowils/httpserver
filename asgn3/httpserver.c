@@ -141,7 +141,7 @@ static void usage(char *exec) {
 
 void queue_job(int connfd) {
     pthread_mutex_lock(&p.mutex);
-    while (p.queue->size == p.queue->capacity) {
+    while (full(p.queue)) {
         pthread_cond_wait(&p.full, &p.mutex);
     }
     enqueue(p.queue, connfd);
@@ -154,7 +154,7 @@ void *handle_thread() {
         int connfd;
         pthread_mutex_lock(&p.mutex);
         //checks to see if there is anything in the queue
-        if (peek(p.queue) == -1) {
+        while (empty(p.queue)) {
             pthread_cond_wait(&p.cond, &p.mutex);
         }
         //grabs the first item in the queue

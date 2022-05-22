@@ -84,6 +84,20 @@ void print_queue(Queue *q) {
     }
 }
 
+int full(Queue *q) {
+    if (q->size >= q->capacity) {
+        return 1;
+    }
+    return 0;
+}
+
+int empty(Queue *q) {
+    if (q->size == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 /*
 
 testqueue:		queue.o list.o
