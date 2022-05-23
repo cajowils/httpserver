@@ -54,23 +54,16 @@ QueueNode *create_queue_node(int val) {
     qn->val = val;
     qn->size = 0;
     qn->next = NULL;
-    qn->prev = NULL;
     return qn;
 }
 
 void delete_queue_node(QueueNode *qn) {
     if (qn) {
-        if (qn->next) {
-            qn->next->prev = qn->prev;
-        }
-        if (qn->prev) {
-            qn->prev->next = qn->next;
-        }
         if (qn->val >= 0) {
             close(qn->val);
         }
         qn->next = NULL;
-        qn->prev = NULL;
+        memset(qn->buf, '\0', qn->size);
         free(qn->buf);
         qn->buf = NULL;
         free(qn);

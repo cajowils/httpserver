@@ -103,6 +103,8 @@ void handle_connection(QueueNode *qn) {
     int connfd = qn->val;
     // parse the buffer for all of the request information and put it in a request struct
     read_all(qn);
+
+    //printf("request: %s\nsize: %d\n", qn->buf, qn->size);
     struct request req = parse_request_regex(qn->buf, qn->size);
     req.connfd = connfd;
 
@@ -135,6 +137,7 @@ void *handle_thread() {
         pthread_mutex_unlock(&p.mutex);
         if (qn && qn->val >= 0) {
             handle_connection(qn);
+            //memset(qn->buf, '\0', qn->size);
         }
     }
     return NULL;
@@ -142,6 +145,7 @@ void *handle_thread() {
 
 void new_job(int connfd) {
     QueueNode *tmp = create_queue_node(connfd);
+    //printf("New Node:\nReq: %s\nSize: %d\nfd: %d\n", tmp->buf, tmp->size, tmp->val);
     pthread_mutex_lock(&p.mutex);
     while (full(p.queue)) {
         pthread_cond_wait(&p.full, &p.mutex);
@@ -151,6 +155,7 @@ void new_job(int connfd) {
     }
     pthread_mutex_unlock(&p.mutex);
     pthread_cond_signal(&p.cond);
+    //memset(tmp->buf, '\0', tmp->size);
 }
 
 // Creates a socket for listening for connections.

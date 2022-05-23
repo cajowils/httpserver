@@ -24,11 +24,11 @@
 #include "list.h"
 
 int write_all(struct request req, struct response rsp, int fd) {
-    int total_written;
+    int total_written = 0;
     //flushes the body that was read in with the request
-    if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
+    /*if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
         return -1;
-    }
+    }*/
 
     int bytes = 4096;
     int size = 0;

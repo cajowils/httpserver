@@ -22,7 +22,6 @@ struct QueueNode {
     int size;
     char *buf;
     QueueNode *next;
-    QueueNode *prev;
 };
 
 QueueNode *create_queue_node(int val);

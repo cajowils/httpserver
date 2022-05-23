@@ -207,14 +207,17 @@ struct request parse_request_regex(char *r, int size) {
         free(headers);
         regfree(&h_re);
     }
+
     if (req.mode == 1 || req.mode == 2) {
         if (!content_found) { // need content-length header for PUT and APPEND requests
             req.error = 400;
-        } else {
+        }
+        /* else {
             req.body_read = size - body_start;
             req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
             strncpy(req.body, r + body_start, req.body_read);
         }
+        */
     }
     return req;
 }
