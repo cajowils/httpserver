@@ -14,7 +14,9 @@ struct Queue {
 
 Queue *create_queue(int capacity);
 
-void enqueue(Queue *q, QueueNode *qn);
+void requeue(Queue *q, QueueNode *qn);
+
+void enqueue(Queue *q, int connfd);
 
 QueueNode *dequeue(Queue *q);
 

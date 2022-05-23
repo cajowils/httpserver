@@ -13,7 +13,7 @@ Queue *create_queue(int capacity) {
     return q;
 }
 
-void enqueue(Queue *q, QueueNode *qn) {
+void requeue(Queue *q, QueueNode *qn) {
     if (q->size > 0) {
         q->tail->next = qn;
         q->tail = q->tail->next;
@@ -26,8 +26,22 @@ void enqueue(Queue *q, QueueNode *qn) {
     return;
 }
 
+void enqueue(Queue *q, int connfd) {
+    if (q->size > 0) {
+        q->tail->next = create_queue_node(connfd);
+        q->tail = q->tail->next;
+    } else {
+        q->head = create_queue_node(connfd);
+        ;
+        q->tail = q->head;
+    }
+    q->size++;
+    //print_queue(q);
+    return;
+}
+
 QueueNode *dequeue(Queue *q) {
-    if (q->size <= 0 || !q->head) {
+    if (!q || q->size <= 0 || !q->head) {
         return NULL;
     }
     QueueNode *qn = q->head;

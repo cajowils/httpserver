@@ -130,32 +130,27 @@ void *handle_thread() {
             pthread_cond_wait(&p.cond, &p.mutex);
         }
         //grabs the first item in the queue
-        if (p.queue) {
-            qn = dequeue(p.queue);
-        }
+        qn = dequeue(p.queue);
         pthread_cond_signal(&p.full);
         pthread_mutex_unlock(&p.mutex);
         if (qn && qn->val >= 0) {
             handle_connection(qn);
-            //memset(qn->buf, '\0', qn->size);
         }
     }
     return NULL;
 }
 
 void new_job(int connfd) {
-    QueueNode *tmp = create_queue_node(connfd);
     //printf("New Node:\nReq: %s\nSize: %d\nfd: %d\n", tmp->buf, tmp->size, tmp->val);
     pthread_mutex_lock(&p.mutex);
     while (full(p.queue)) {
         pthread_cond_wait(&p.full, &p.mutex);
     }
     if (p.queue) {
-        enqueue(p.queue, tmp);
+        enqueue(p.queue, connfd);
     }
     pthread_mutex_unlock(&p.mutex);
     pthread_cond_signal(&p.cond);
-    //memset(tmp->buf, '\0', tmp->size);
 }
 
 // Creates a socket for listening for connections.

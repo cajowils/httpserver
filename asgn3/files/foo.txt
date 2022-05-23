@@ -1,1 +1,0 @@
-Hello World! This is a file to test the implementation of CSE 130 Assignment 1. If all goes well, these tests should pass.
