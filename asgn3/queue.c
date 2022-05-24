@@ -57,6 +57,30 @@ QueueNode *dequeue(Queue *q) {
     return qn;
 }
 
+QueueNode *find(Queue *q, int connfd) {
+    if (!q || q->size <= 0 || !q->head) {
+        return NULL;
+    }
+    QueueNode *ptr = q->head;
+    QueueNode *prev = NULL;
+    while (ptr != NULL) {
+        if (ptr->val == connfd) {
+            //delete ptr from queue
+            if (prev == NULL) {
+                q->head = ptr->next;
+            }
+            if (ptr->next == NULL) {
+                q->tail = prev;
+            }
+            q->size--;
+            return ptr;
+        }
+        prev = ptr;
+        ptr = ptr->next;
+    }
+    return NULL;
+}
+
 int peek(Queue *q) {
     if (q->size <= 0 || !q->head) {
         return -1;

@@ -20,6 +20,8 @@ void enqueue(Queue *q, int connfd);
 
 QueueNode *dequeue(Queue *q);
 
+QueueNode *find(Queue *q, int connfd);
+
 int peek(Queue *q);
 
 void delete_queue(Queue *q);
