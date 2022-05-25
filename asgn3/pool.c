@@ -19,6 +19,13 @@ void initialze_pool(Pool *p, int num_threads, int queue_size) {
     return;
 }
 
+int queues_full(Pool *p) {
+    if (p->queue->size + p->process_queue->size == p->queue->capacity) {
+        return 1;
+    }
+    return 0;
+}
+
 void destruct_pool(Pool *p) {
     p->running = 0;
     pthread_cond_broadcast(&p->cond);

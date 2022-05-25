@@ -35,7 +35,7 @@ pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 Pool p;
 
-struct epoll_event ev, events[MAX_CONNECTIONS];
+struct epoll_event events[MAX_CONNECTIONS];
 int listenfd, nfds, epollfd;
 
 int read_all(QueueNode *qn) {
@@ -61,10 +61,10 @@ int read_all(QueueNode *qn) {
     } while (bytes > 0 && qn->size < REQUEST_LEN && done != 1);
     regfree(&re);
     if (!done && bytes < 0 && errno == EWOULDBLOCK) {
-        //printf("Blocked!\nbuf: %s\n", qn->buf);
+        //printf("Blocked!\nfd: %d\nbuf: %s\n",qn->val,qn->buf);
         return -1;
     }
-    //printf("Passed!\nbuf: %s\n",qn->buf);
+    //printf("Passed!\nfd: %d\nbuf: %s\n",qn->val,qn->buf);
     return 1;
 }
 
@@ -134,6 +134,7 @@ void handle_connection(QueueNode *qn) {
 
     delete_request(req);
     delete_response(rsp);
+    close(connfd);
     delete_queue_node(qn);
     return;
 }
@@ -157,7 +158,13 @@ void *handle_thread() {
 
                 //adds the notification for the fd again so that it can be read from
                 pthread_mutex_lock(&p.mutex);
+                while (queues_full(&p)) {
+                    pthread_cond_wait(&p.full, &p.mutex);
+                }
                 requeue(p.process_queue, qn);
+                struct epoll_event ev;
+                ev.events = EPOLLIN;
+                ev.data.fd = qn->val;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, qn->val, &ev) == -1) {
                     warn("epoll_ctl: requeue connfd %d", qn->val);
                     continue;
@@ -174,7 +181,7 @@ void *handle_thread() {
 void add_job(int connfd) {
     //printf("New Node:\nReq: %s\nSize: %d\nfd: %d\n", tmp->buf, tmp->size, tmp->val);
     pthread_mutex_lock(&p.mutex);
-    while (full(p.queue)) {
+    while (queues_full(&p)) {
         pthread_cond_wait(&p.full, &p.mutex);
     }
     //search linked list for fd, if it is found then enqueue it, otherwise create one and enqueue it
@@ -186,8 +193,8 @@ void add_job(int connfd) {
             enqueue(p.queue, connfd);
         }
     }
-    pthread_mutex_unlock(&p.mutex);
     pthread_cond_signal(&p.cond);
+    pthread_mutex_unlock(&p.mutex);
 }
 
 // Creates a socket for listening for connections.
@@ -283,7 +290,7 @@ int main(int argc, char *argv[]) {
         perror("epoll_create1");
         exit(EXIT_FAILURE);
     }
-
+    struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = listenfd;
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev) == -1) {
@@ -317,8 +324,14 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
             } else {
+                /*printf("fd: %d\n", events[n].data.fd);
+                print_queue(p.queue);
+                printf("Process Queue:\n");
+                print_queue(p.process_queue);*/
+                ev.data.fd = events[n].data.fd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[n].data.fd, &ev) == -1) {
                     warn("epoll_ctl: processing connection %d", events[n].data.fd);
+                    return EXIT_FAILURE;
                 } else if (events[n].data.fd >= 0) {
                     add_job(events[n].data.fd);
                 }

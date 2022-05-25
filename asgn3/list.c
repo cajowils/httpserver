@@ -51,6 +51,7 @@ void delete_list(Node *head) {
 QueueNode *create_queue_node(int val) {
     QueueNode *qn = (QueueNode *) malloc(sizeof(QueueNode));
     qn->buf = (char *) malloc(sizeof(char) * 2048);
+    memset(qn->buf, '\0', 2048);
     qn->val = val;
     qn->size = 0;
     qn->next = NULL;
@@ -63,7 +64,6 @@ void delete_queue_node(QueueNode *qn) {
             close(qn->val);
         }
         qn->next = NULL;
-        memset(qn->buf, '\0', qn->size);
         free(qn->buf);
         qn->buf = NULL;
         free(qn);

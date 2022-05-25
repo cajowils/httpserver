@@ -22,6 +22,8 @@ struct Pool {
 
 void initialze_pool(Pool *p, int num_threads, int queue_size);
 
+int queues_full(Pool *p);
+
 void destruct_pool(Pool *p);
 
 #endif

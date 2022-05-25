@@ -15,14 +15,17 @@ Queue *create_queue(int capacity) {
 
 void requeue(Queue *q, QueueNode *qn) {
     if (q->size > 0) {
+        if (q->tail == NULL) {
+            printf("ERROR!!!\n");
+        }
         q->tail->next = qn;
+        printf("End of error\n");
         q->tail = q->tail->next;
     } else {
         q->head = qn;
         q->tail = q->head;
     }
     q->size++;
-    //print_queue(q);
     return;
 }
 
@@ -68,10 +71,14 @@ QueueNode *find(Queue *q, int connfd) {
             //delete ptr from queue
             if (prev == NULL) {
                 q->head = ptr->next;
+            } else {
+                prev->next = ptr->next;
             }
             if (ptr->next == NULL) {
                 q->tail = prev;
             }
+            ptr->next = NULL;
+
             q->size--;
             return ptr;
         }
@@ -142,19 +149,30 @@ testqueue:		queue.o list.o
 int main() {
     //time_t t;
     //srand((unsigned) time(&t));
-    Queue *q = create_queue();
-    for (int j=0;j<3;j++) {
-        printf("Enqueuing:\n");
-        for (int i=0;i<5;i++) {
-            enqueue(q, rand() % 50);
-        }
-        print_queue(q);
-        printf("Dequeuing:\n");
-        for (int i=0; i<3;i++) {
-            dequeue(q);
-        }
-        print_queue(q);
+    Queue *q = create_queue(128);
+    Queue *q2 = create_queue(128);
+
+
+    printf("Enqueuing:\n");
+    for (int i=0;i<100000;i++) {
+        enqueue(q, rand() % 5000);
     }
-    delete_queue(q);
-}
-*/
+    print_queue(q);
+    print_queue(q2);
+    printf("Removing:\n");
+    QueueNode *qn;
+    for (int i=0; i<10000;i++) {
+        if((qn = find(q, i))==NULL) {
+            enqueue(q2, i);
+        }
+        else {
+            printf("Requeing\n");
+            requeue(q2, qn);
+        }
+        
+    }
+    print_queue(q);
+    print_queue(q2);
+
+    
+}*/
