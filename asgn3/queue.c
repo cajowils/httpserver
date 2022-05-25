@@ -15,11 +15,7 @@ Queue *create_queue(int capacity) {
 
 void requeue(Queue *q, QueueNode *qn) {
     if (q->size > 0) {
-        if (q->tail == NULL) {
-            printf("ERROR!!!\n");
-        }
         q->tail->next = qn;
-        printf("End of error\n");
         q->tail = q->tail->next;
     } else {
         q->head = qn;

@@ -55,6 +55,7 @@ QueueNode *create_queue_node(int val) {
     qn->val = val;
     qn->size = 0;
     qn->next = NULL;
+    qn->request = 0;
     return qn;
 }
 

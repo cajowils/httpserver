@@ -68,6 +68,38 @@ int read_all(QueueNode *qn) {
     return 1;
 }
 
+int write_all(QueueNode *qn) {
+    int total_written = 0;
+    //flushes the body that was read in with the request
+    /*if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
+        return -1;
+    }*/
+
+    int bytes = 4096;
+    int size = 0;
+    char *buf = (char *) calloc(1, sizeof(char) * bytes);
+    int bytes_written = 0;
+
+    int read_bytes
+        = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
+    do {
+        size = read(qn->val, buf, read_bytes);
+        bytes_written = write(qn->write_fd, buf, size);
+        if (size > 0 && bytes_written == size) {
+            total_written += bytes_written;
+            qn->body_read += size;
+            read_bytes
+                = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
+        }
+    } while (size > 0 && qn->body_read < qn->body_size);
+    free(buf);
+    if (size < 0 && errno == EWOULDBLOCK) {
+        return -1;
+    }
+
+    return 1;
+}
+
 void send_response(struct response rsp, int connfd) {
 
     int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
@@ -118,24 +150,67 @@ void log_request(struct request req, struct response rsp) {
     //pthread_mutex_unlock(&log_lock);
 }
 
+void requeue_job(QueueNode *qn) {
+    pthread_mutex_lock(&p.mutex);
+    while (queues_full(&p)) {
+        pthread_cond_wait(&p.full, &p.mutex);
+    }
+    requeue(p.process_queue, qn);
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = qn->val;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, qn->val, &ev) == -1) {
+        warn("epoll_ctl: requeue connfd %d", qn->val);
+    }
+    //printf("requeing fd: %d\n", qn->val);
+    pthread_cond_signal(&p.full);
+    pthread_mutex_unlock(&p.mutex);
+    return;
+
+    //adds the notification for the fd again so that it can be read from
+}
+
 void handle_connection(QueueNode *qn) {
-    int connfd = qn->val;
-    // parse the buffer for all of the request information and put it in a request struct
-    //printf("request: %s\nsize: %d\n", qn->buf, qn->size);
-    struct request req = parse_request_regex(qn->buf, qn->size);
-    req.connfd = connfd;
+    if (qn->request != 1) {
+        if (read_all(qn) == 1) {
+            qn->request = 1;
+            // parse the buffer for all of the request information and put it in a request struct
+            //printf("request: %s\nsize: %d\n", qn->buf, qn->size);
+            struct request req = parse_request_regex(qn->buf, qn->size);
+            req.connfd = qn->val;
 
-    //process the request and format it into a response
-    struct response rsp = process_request(req);
+            //process the request and format it into a response
+            struct response rsp = process_request(req);
 
-    send_response(rsp, connfd);
+            send_response(rsp, qn->val);
 
-    log_request(req, rsp);
+            log_request(req, rsp);
 
-    delete_request(req);
-    delete_response(rsp);
-    close(connfd);
-    delete_queue_node(qn);
+            qn->body_size = req.body_size;
+            qn->body_read = req.body_read;
+            qn->mode = rsp.mode;
+            qn->write_fd = rsp.fd;
+            qn->code = rsp.line.code;
+
+            delete_request(req);
+            delete_response(rsp);
+        } else {
+            requeue_job(qn);
+            return;
+        }
+    }
+    if (qn->request == 1) {
+        if ((qn->mode == 1 || qn->mode == 2) && (qn->code == 200 || qn->code == 201)) {
+            if (write_all(qn) != 1) {
+                requeue_job(qn);
+                return;
+            }
+            close(qn->write_fd);
+        }
+
+        delete_queue_node(qn);
+    }
+
     return;
 }
 
@@ -152,27 +227,7 @@ void *handle_thread() {
         pthread_cond_signal(&p.full);
         pthread_mutex_unlock(&p.mutex);
         if (qn && qn->val >= 0) {
-            if (read_all(qn) == 1) {
-                handle_connection(qn);
-            } else {
-
-                //adds the notification for the fd again so that it can be read from
-                pthread_mutex_lock(&p.mutex);
-                while (queues_full(&p)) {
-                    pthread_cond_wait(&p.full, &p.mutex);
-                }
-                requeue(p.process_queue, qn);
-                struct epoll_event ev;
-                ev.events = EPOLLIN;
-                ev.data.fd = qn->val;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, qn->val, &ev) == -1) {
-                    warn("epoll_ctl: requeue connfd %d", qn->val);
-                    continue;
-                }
-                //printf("requeing fd: %d\n", qn->val);
-                pthread_cond_signal(&p.full);
-                pthread_mutex_unlock(&p.mutex);
-            }
+            handle_connection(qn);
         }
     }
     return NULL;
@@ -276,8 +331,8 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, sigterm_handler);
 
     int listenfd = create_listen_socket(port);
-    int flags = fcntl(listenfd, F_GETFL, 0);
-    fcntl(listenfd, F_SETFL, flags | O_NONBLOCK);
+    /*int flags = fcntl(listenfd, F_GETFL, 0);
+    fcntl(listenfd, F_SETFL, flags | O_NONBLOCK);*/
 
     initialze_pool(&p, num_threads, MAX_CONNECTIONS);
 
@@ -285,7 +340,7 @@ int main(int argc, char *argv[]) {
         pthread_create(&p.threads[i], NULL, handle_thread, NULL);
     }
 
-    epollfd = epoll_create1(0);
+    epollfd = epoll_create(MAX_CONNECTIONS);
     if (epollfd == -1) {
         perror("epoll_create1");
         exit(EXIT_FAILURE);
@@ -332,7 +387,7 @@ int main(int argc, char *argv[]) {
                 if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[n].data.fd, &ev) == -1) {
                     warn("epoll_ctl: processing connection %d", events[n].data.fd);
                     return EXIT_FAILURE;
-                } else if (events[n].data.fd >= 0) {
+                } else if (events[n].data.fd > 0) {
                     add_job(events[n].data.fd);
                 }
             }
