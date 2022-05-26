@@ -52,6 +52,7 @@ QueueNode *dequeue(Queue *q) {
         q->tail = NULL;
         q->head = NULL;
     }
+    qn->next = NULL;
     //print_queue(q);
     return qn;
 }
@@ -76,6 +77,7 @@ QueueNode *find(Queue *q, int connfd) {
             ptr->next = NULL;
 
             q->size--;
+            ptr->next = NULL;
             return ptr;
         }
         prev = ptr;

@@ -61,6 +61,9 @@ QueueNode *create_queue_node(int val) {
 
 void delete_queue_node(QueueNode *qn) {
     if (qn) {
+        if (qn->req_fd >= 0) {
+            close(qn->req_fd);
+        }
         if (qn->val >= 0) {
             close(qn->val);
         }

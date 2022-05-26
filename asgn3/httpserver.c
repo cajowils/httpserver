@@ -84,18 +84,17 @@ int write_all(QueueNode *qn) {
         = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
     do {
         size = read(qn->val, buf, read_bytes);
-        bytes_written = write(qn->write_fd, buf, size);
-        if (size > 0 && bytes_written == size) {
-            total_written += bytes_written;
-            qn->body_read += size;
-            read_bytes
-                = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
+        if (size < 0 && errno == EWOULDBLOCK) {
+            free(buf);
+            return -1;
         }
+        bytes_written = write(qn->req_fd, buf, size);
+        total_written += bytes_written;
+        qn->body_read += size;
+        read_bytes
+            = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
     } while (size > 0 && qn->body_read < qn->body_size);
     free(buf);
-    if (size < 0 && errno == EWOULDBLOCK) {
-        return -1;
-    }
 
     return 1;
 }
@@ -189,7 +188,7 @@ void handle_connection(QueueNode *qn) {
             qn->body_size = req.body_size;
             qn->body_read = req.body_read;
             qn->mode = rsp.mode;
-            qn->write_fd = rsp.fd;
+            qn->req_fd = rsp.fd;
             qn->code = rsp.line.code;
 
             delete_request(req);
@@ -205,7 +204,6 @@ void handle_connection(QueueNode *qn) {
                 requeue_job(qn);
                 return;
             }
-            close(qn->write_fd);
         }
 
         delete_queue_node(qn);
@@ -342,7 +340,7 @@ int main(int argc, char *argv[]) {
 
     epollfd = epoll_create(MAX_CONNECTIONS);
     if (epollfd == -1) {
-        perror("epoll_create1");
+        perror("epoll_create");
         exit(EXIT_FAILURE);
     }
     struct epoll_event ev;
@@ -354,7 +352,6 @@ int main(int argc, char *argv[]) {
     }
 
     for (;;) {
-
         nfds = epoll_wait(epollfd, events, MAX_CONNECTIONS, -1);
         if (nfds == -1) {
             warn("epoll wait failure");
