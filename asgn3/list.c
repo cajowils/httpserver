@@ -21,10 +21,12 @@
 //starts with a dummy node as the head of the list
 
 Node *create_node(int head, int val) {
-    Node *n = (Node *) calloc(1, sizeof(Node));
+    Node *n = (Node *) malloc(sizeof(Node));
     n->next = NULL;
-    n->head = (char *) calloc(1, sizeof(char) * head);
-    n->val = (char *) calloc(1, sizeof(char) * val);
+    n->head = (char *) malloc(sizeof(char) * head + 1);
+    memset(n->head, '\0', head + 1);
+    n->val = (char *) malloc(sizeof(char) * val + 1);
+    memset(n->val, '\0', val + 1);
     return n;
 }
 
@@ -50,8 +52,8 @@ void delete_list(Node *head) {
 
 QueueNode *create_queue_node(int val) {
     QueueNode *qn = (QueueNode *) malloc(sizeof(QueueNode));
-    qn->buf = (char *) malloc(sizeof(char) * 2048);
-    memset(qn->buf, '\0', 2048);
+    qn->buf = (char *) malloc(sizeof(char) * 4096);
+    memset(qn->buf, '\0', 4096);
     qn->val = val;
     qn->size = 0;
     qn->next = NULL;

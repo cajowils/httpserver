@@ -25,6 +25,7 @@ struct QueueNode {
     int mode;
     int body_read;
     int body_size;
+    int body_start;
     int req_fd;
     int code;
     QueueNode *next;

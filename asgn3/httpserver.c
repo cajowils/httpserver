@@ -26,7 +26,7 @@
 #define OPTIONS              "t:l:"
 #define BUF_SIZE             4096
 #define DEFAULT_THREAD_COUNT 4
-#define REQUEST_LEN          2048
+#define REQUEST_LEN          4096
 #define MAX_CONNECTIONS      128
 
 static FILE *logfile;
@@ -71,9 +71,9 @@ int read_all(QueueNode *qn) {
 int write_all(QueueNode *qn) {
     int total_written = 0;
     //flushes the body that was read in with the request
-    /*if ((total_written = write(rsp.fd, req.body, req.body_read)) < 0) {
+    if ((total_written = write(qn->req_fd, qn->buf + qn->body_start, qn->body_read)) < 0) {
         return -1;
-    }*/
+    }
 
     int bytes = 4096;
     int size = 0;
@@ -193,6 +193,7 @@ void handle_connection(QueueNode *qn) {
             qn->mode = rsp.mode;
             qn->req_fd = rsp.fd;
             qn->code = rsp.line.code;
+            qn->body_start = req.body_start;
 
             delete_request(req);
             delete_response(rsp);

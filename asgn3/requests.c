@@ -57,7 +57,6 @@ struct request parse_request_regex(char *r, int size) {
     int headers_start;
     int headers_end;
     int no_headers = 0;
-    int body_start;
 
     int result = regexec(&re, r, num_groups, groups, 0);
     regfree(&re);
@@ -76,7 +75,7 @@ struct request parse_request_regex(char *r, int size) {
         }
 
         // Getting the index of the body
-        body_start = groups[0].rm_eo;
+        req.body_start = groups[0].rm_eo;
 
         // Getting Method
         int method_size = groups[1].rm_eo - groups[1].rm_so;
@@ -201,6 +200,8 @@ struct request parse_request_regex(char *r, int size) {
                     int ID = strtoint(ptr->val);
                     if (ID > 0) {
                         req.ID = ID;
+                    } else {
+                        printf("ID: %d\n", ID);
                     }
                 }
             }
@@ -215,13 +216,10 @@ struct request parse_request_regex(char *r, int size) {
     if (req.mode == 1 || req.mode == 2) {
         if (!content_found) { // need content-length header for PUT and APPEND requests
             req.error = 400;
-        }
-        /* else {
-            req.body_read = size - body_start;
+        } else {
+            req.body_read = size - req.body_start;
             req.body_read = (req.body_read > req.body_size) ? req.body_size : req.body_read;
-            strncpy(req.body, r + body_start, req.body_read);
         }
-        */
     }
     return req;
 }
@@ -231,8 +229,6 @@ struct request new_request() {
     req.line.method = NULL;
     req.line.URI = NULL;
     req.line.version = NULL;
-    req.body = (char *) calloc(1, sizeof(char) * 4096);
-    memset(req.body, '\0', 4096);
     req.body_read = 0;
     req.num_headers = 0;
     req.body_size = 0;
@@ -244,7 +240,6 @@ struct request new_request() {
 
 void delete_request(struct request req) {
     delete_list(req.headers);
-    free(req.body);
     if (req.line.method) {
         free(req.line.method);
     }

@@ -12,10 +12,10 @@ struct request_line {
 struct request {
     struct request_line line;
     Node *headers;
-    char *body;
     int body_read;
     int num_headers;
     int body_size;
+    int body_start;
     int mode;
     int error;
     int connfd;
