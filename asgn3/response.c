@@ -27,7 +27,8 @@
 
 struct response status(struct response rsp, int error_code) {
     rsp.line.code = error_code;
-    rsp.line.phrase = (char *) calloc(1, sizeof(char) * 50);
+    rsp.line.phrase = (char *) malloc(sizeof(char) * 128);
+    memset(rsp.line.phrase, '\0', 128);
     switch (error_code) {
     case 200: strcpy(rsp.line.phrase, "OK"); break;
     case 201: strcpy(rsp.line.phrase, "Created"); break;

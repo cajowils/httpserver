@@ -103,7 +103,8 @@ void send_response(struct response rsp, int connfd) {
 
     int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
                     + 8; //need 3 for the status code, 2 for spaces and 2 for the carriage return
-    char *line_buf = (char *) calloc(1, sizeof(char) * line_size);
+    char *line_buf = (char *) malloc(sizeof(char) * line_size);
+    memset(line_buf, '\0', line_size);
     snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
     write(connfd, line_buf, line_size - 1);
     free(line_buf);
@@ -112,7 +113,8 @@ void send_response(struct response rsp, int connfd) {
     while (ptr != NULL) {
         int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val)
                           + 5; //1 for colon, 1 for space, 2 for \r\n
-        char *header_buf = (char *) calloc(1, sizeof(char) * header_size);
+        char *header_buf = (char *) malloc(sizeof(char) * header_size);
+        memset(header_buf, '\0', header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
         write(connfd, header_buf, header_size - 1);
         ptr = ptr->next;
@@ -131,7 +133,8 @@ void send_response(struct response rsp, int connfd) {
     } else {
 
         int phrase_size = (int) strlen(rsp.line.phrase) + 2; //1 for /n
-        char *phrase_buf = (char *) calloc(1, sizeof(char) * phrase_size);
+        char *phrase_buf = (char *) malloc(sizeof(char) * phrase_size);
+        memset(phrase_buf, '\0', phrase_size);
         snprintf(phrase_buf, phrase_size, "%s\n", rsp.line.phrase);
         write(connfd, phrase_buf, phrase_size - 1);
         free(phrase_buf);
@@ -141,12 +144,12 @@ void send_response(struct response rsp, int connfd) {
 }
 
 void log_request(struct request req, struct response rsp) {
-    //pthread_mutex_lock(&log_lock);
+    pthread_mutex_lock(&log_lock);
     if (req.line.method != NULL && req.line.URI != NULL) {
         LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
         fflush(logfile);
     }
-    //pthread_mutex_unlock(&log_lock);
+    pthread_mutex_unlock(&log_lock);
 }
 
 void requeue_job(QueueNode *qn) {

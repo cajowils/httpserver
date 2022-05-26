@@ -80,7 +80,8 @@ struct request parse_request_regex(char *r, int size) {
 
         // Getting Method
         int method_size = groups[1].rm_eo - groups[1].rm_so;
-        req.line.method = (char *) calloc(1, sizeof(char) * method_size);
+        req.line.method = (char *) malloc(sizeof(char) * method_size + 1);
+        memset(req.line.method, '\0', method_size + 1);
         strncpy(req.line.method, r + groups[1].rm_so, method_size);
 
         if (strncmp(req.line.method, "GET", method_size) == 0
@@ -99,12 +100,14 @@ struct request parse_request_regex(char *r, int size) {
 
         //Getting URI
         int uri_size = groups[2].rm_eo - groups[2].rm_so;
-        req.line.URI = (char *) calloc(1, sizeof(char) * uri_size + 1);
+        req.line.URI = (char *) malloc(sizeof(char) * uri_size + 1);
+        memset(req.line.URI, '\0', uri_size + 1);
         strncpy(req.line.URI, r + groups[2].rm_so, uri_size);
 
         //Gettng HTTP Version
         int version_size = groups[4].rm_eo - groups[4].rm_so;
-        req.line.version = (char *) calloc(1, sizeof(char) * version_size + 1);
+        req.line.version = (char *) malloc(sizeof(char) * version_size + 1);
+        memset(req.line.version, '\0', version_size + 1);
         strncpy(req.line.version, r + groups[4].rm_so, version_size);
         headers_start = groups[4].rm_eo;
 
@@ -130,7 +133,8 @@ struct request parse_request_regex(char *r, int size) {
         //Matches the headers and stores them in a linked list
 
         int h_size = headers_end - headers_start;
-        char *headers = (char *) calloc(1, sizeof(char) * h_size + 1);
+        char *headers = (char *) malloc(sizeof(char) * h_size + 1);
+        memset(headers, '\0', h_size + 1);
         strncpy(headers, r + headers_start, h_size);
 
         char *h_pattern = "([a-zA-Z0-9-]+): ([a-zA-Z0-9_\\.:\\/\\*-]+)\r\n";
@@ -228,6 +232,7 @@ struct request new_request() {
     req.line.URI = NULL;
     req.line.version = NULL;
     req.body = (char *) calloc(1, sizeof(char) * 4096);
+    memset(req.body, '\0', 4096);
     req.body_read = 0;
     req.num_headers = 0;
     req.body_size = 0;
