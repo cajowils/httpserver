@@ -49,7 +49,7 @@ int read_all(QueueNode *qn) {
     }
     do {
         errno = 0;
-        bytes = read(qn->val, qn->buf + qn->size, 1);
+        bytes = read(qn->val, qn->buf + qn->size, REQUEST_LEN - qn->size);
 
         if (bytes > 0) {
             qn->size += bytes;
@@ -69,11 +69,13 @@ int read_all(QueueNode *qn) {
 }
 
 int write_all(QueueNode *qn) {
-    int total_written = 0;
-    //flushes the body that was read in with the request
-    if ((total_written = write(qn->req_fd, qn->buf + qn->body_start, qn->body_read)) < 0) {
-        return -1;
+    if (!qn->flushed) {
+        write(qn->req_fd, qn->buf + qn->body_start, qn->body_read);
+        qn->flushed = 1;
     }
+
+    int total_written = qn->body_read;
+    //flushes the body that was read in with the request
 
     int bytes = 4096;
     int size = 0;
@@ -125,7 +127,7 @@ void send_response(struct response rsp, int connfd) {
 
     if (rsp.mode == 0 && rsp.line.code == 200) { //checks that it is a successful GET request
         int size;
-        int bytes = 2048;
+        int bytes = 4096;
         char buf2[bytes];
         while ((size = read(rsp.fd, buf2, bytes)) > 0) {
             write(connfd, buf2, size);

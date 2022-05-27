@@ -28,6 +28,7 @@ struct QueueNode {
     int body_start;
     int req_fd;
     int code;
+    int flushed;
     QueueNode *next;
 };
 

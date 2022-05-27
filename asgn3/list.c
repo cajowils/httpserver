@@ -58,6 +58,7 @@ QueueNode *create_queue_node(int val) {
     qn->size = 0;
     qn->next = NULL;
     qn->request = 0;
+    qn->flushed = 0;
     return qn;
 }
 
