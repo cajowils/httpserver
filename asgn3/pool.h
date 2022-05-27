@@ -16,8 +16,6 @@ struct Pool {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     pthread_cond_t full;
-    struct epoll_event ev, *events;
-    int listen_sock, conn_sock, nfds, epollfd;
 };
 
 void initialze_pool(Pool *p, int num_threads, int queue_size);
