@@ -22,8 +22,6 @@ struct request {
     int ID;
 };
 
-//int read_all(int fd, char *buf, int nbytes);
-
 struct request parse_request_regex(char *r, int size);
 
 struct request new_request();

@@ -4,6 +4,8 @@
 #include "list.h"
 #include "queue.h"
 
+//instantiates a new queue
+
 Queue *create_queue(int capacity) {
     Queue *q = malloc(sizeof(Queue));
     q->head = NULL;
@@ -12,6 +14,8 @@ Queue *create_queue(int capacity) {
     q->capacity = capacity;
     return q;
 }
+
+//adds an already existing node back to the queue
 
 void requeue(Queue *q, QueueNode *qn) {
     if (q->size > 0) {
@@ -25,6 +29,8 @@ void requeue(Queue *q, QueueNode *qn) {
     return;
 }
 
+//creates a new node given a connfd and adds it to the queue
+
 void enqueue(Queue *q, int connfd) {
     if (q->size > 0) {
         q->tail->next = create_queue_node(connfd);
@@ -35,9 +41,10 @@ void enqueue(Queue *q, int connfd) {
         q->tail = q->head;
     }
     q->size++;
-    //print_queue(q);
     return;
 }
+
+//returns the tail of the queue
 
 QueueNode *dequeue(Queue *q) {
     if (!q || q->size <= 0 || !q->head) {
@@ -53,9 +60,10 @@ QueueNode *dequeue(Queue *q) {
         q->head = NULL;
     }
     qn->next = NULL;
-    //print_queue(q);
     return qn;
 }
+
+//iterates through the queue and returns the node with the matching connfd
 
 QueueNode *find(Queue *q, int connfd) {
     if (!q || q->size <= 0 || !q->head) {
@@ -86,12 +94,15 @@ QueueNode *find(Queue *q, int connfd) {
     return NULL;
 }
 
+//gets the head of the queue
+
 int peek(Queue *q) {
     if (q->size <= 0 || !q->head) {
         return -1;
     }
     return q->head->val;
 }
+//deletes the queue
 
 void delete_queue(Queue *q) {
     if (q) {
@@ -125,6 +136,8 @@ void print_queue(Queue *q) {
     }
 }
 
+//checks whether the queue is full or empty
+
 int full(Queue *q) {
     if (q->size >= q->capacity) {
         return 1;
@@ -140,6 +153,8 @@ int empty(Queue *q) {
 }
 
 /*
+
+For testing only:
 
 testqueue:		queue.o list.o
 				$(CC) -o testqueue queue.o list.o

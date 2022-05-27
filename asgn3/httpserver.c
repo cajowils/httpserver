@@ -39,6 +39,7 @@ struct epoll_event events[MAX_CONNECTIONS];
 int listenfd, nfds, epollfd;
 
 int read_all(QueueNode *qn) {
+    //non-blocking implementation of read. stores the request in the QueueNode until \r\n\r\n is seen, in which case it processes the request.
     int bytes = 0;
     int done = 0;
     const char *pattern = "\r\n\r\n";
@@ -61,21 +62,20 @@ int read_all(QueueNode *qn) {
     } while (bytes > 0 && qn->size < REQUEST_LEN && done != 1);
     regfree(&re);
     if (!done && bytes < 0 && errno == EWOULDBLOCK) {
-        //printf("Blocked!\nfd: %d\nbuf: %s\n",qn->val,qn->buf);
+        //blocked, returning later
         return -1;
     }
-    //printf("Passed!\nfd: %d\nbuf: %s\n",qn->val,qn->buf);
     return 1;
 }
 
 int write_all(QueueNode *qn) {
+    //flushes the body that was read in with the request
     if (!qn->flushed) {
         write(qn->req_fd, qn->buf + qn->body_start, qn->body_read);
         qn->flushed = 1;
     }
 
     int total_written = qn->body_read;
-    //flushes the body that was read in with the request
 
     int bytes = 4096;
     int size = 0;
@@ -84,9 +84,13 @@ int write_all(QueueNode *qn) {
 
     int read_bytes
         = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
+
+    //reads the bytes from the connfd and puts/appends them to a file
+    //this implementation does not block, so it may come back to this function multiple times
     do {
         size = read(qn->val, buf, read_bytes);
         if (size < 0 && errno == EWOULDBLOCK) {
+            //blocked, exiting here
             free(buf);
             return -1;
         }
@@ -96,8 +100,8 @@ int write_all(QueueNode *qn) {
         read_bytes
             = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
     } while (size > 0 && qn->body_read < qn->body_size);
+    //done reading the request
     free(buf);
-
     return 1;
 }
 
@@ -156,30 +160,26 @@ void log_request(struct request req, struct response rsp) {
 
 void requeue_job(QueueNode *qn) {
     pthread_mutex_lock(&p.mutex);
-    while (queues_full(&p)) {
-        pthread_cond_wait(&p.full, &p.mutex);
-    }
     requeue(p.process_queue, qn);
+
+    //adds the notification for the fd so that it can be alerted when new data is available
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = qn->val;
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, qn->val, &ev) == -1) {
         warn("epoll_ctl: requeue connfd %d", qn->val);
     }
-    //printf("requeing fd: %d\n", qn->val);
-    pthread_cond_signal(&p.full);
     pthread_mutex_unlock(&p.mutex);
     return;
-
-    //adds the notification for the fd again so that it can be read from
 }
 
 void handle_connection(QueueNode *qn) {
     if (qn->request != 1) {
+        //checks that the request is fully read, otherwise proceeds to read it
         if (read_all(qn) == 1) {
             qn->request = 1;
             // parse the buffer for all of the request information and put it in a request struct
-            //printf("request: %s\nsize: %d\n", qn->buf, qn->size);
+
             struct request req = parse_request_regex(qn->buf, qn->size);
             req.connfd = qn->val;
 
@@ -200,10 +200,12 @@ void handle_connection(QueueNode *qn) {
             delete_request(req);
             delete_response(rsp);
         } else {
+            //if the read is blocked, add it to the process_queue to be processed later
             requeue_job(qn);
             return;
         }
     }
+    //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
     if (qn->request == 1) {
         if ((qn->mode == 1 || qn->mode == 2) && (qn->code == 200 || qn->code == 201)) {
             if (write_all(qn) != 1) {
@@ -211,7 +213,7 @@ void handle_connection(QueueNode *qn) {
                 return;
             }
         }
-
+        //request is done, so destroy the queue node
         delete_queue_node(qn);
     }
 
@@ -219,6 +221,7 @@ void handle_connection(QueueNode *qn) {
 }
 
 void *handle_thread() {
+    //while the program is running
     while (p.running) {
         QueueNode *qn = NULL;
         pthread_mutex_lock(&p.mutex);
@@ -231,6 +234,7 @@ void *handle_thread() {
         pthread_cond_signal(&p.full);
         pthread_mutex_unlock(&p.mutex);
         if (qn && qn->val >= 0) {
+            //sends the request to be processed
             handle_connection(qn);
         }
     }
@@ -238,11 +242,8 @@ void *handle_thread() {
 }
 
 void add_job(int connfd) {
-    //printf("New Node:\nReq: %s\nSize: %d\nfd: %d\n", tmp->buf, tmp->size, tmp->val);
     pthread_mutex_lock(&p.mutex);
-    while (queues_full(&p)) {
-        pthread_cond_wait(&p.full, &p.mutex);
-    }
+
     //search linked list for fd, if it is found then enqueue it, otherwise create one and enqueue it
     QueueNode *qn;
     if (p.queue && p.process_queue) {
@@ -278,6 +279,7 @@ static int create_listen_socket(uint16_t port) {
 }
 
 static void sigterm_handler(int sig) {
+    //joins the threads, frees the queues, and flushes the logfile once the program is killed
     if (sig == SIGTERM) {
         warnx("received SIGTERM");
         destruct_pool(&p);
@@ -335,36 +337,43 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, sigterm_handler);
 
     int listenfd = create_listen_socket(port);
-    /*int flags = fcntl(listenfd, F_GETFL, 0);
-    fcntl(listenfd, F_SETFL, flags | O_NONBLOCK);*/
 
+    //initializes the global threadpool struct
     initialze_pool(&p, num_threads, MAX_CONNECTIONS);
 
+    //creates the threads
     for (int i = 0; i < num_threads; i++) {
         pthread_create(&p.threads[i], NULL, handle_thread, NULL);
     }
 
+    //establishes epoll to listen for notifications on the fds that were interested in
     epollfd = epoll_create(MAX_CONNECTIONS);
     if (epollfd == -1) {
         perror("epoll_create");
         exit(EXIT_FAILURE);
     }
+
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = listenfd;
+
+    //adds the listenfd to the epoll
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev) == -1) {
         perror("epoll_ctl: listenfd");
         exit(EXIT_FAILURE);
     }
 
     for (;;) {
+        //waits until an epoll notification is found
         nfds = epoll_wait(epollfd, events, MAX_CONNECTIONS, -1);
         if (nfds == -1) {
             warn("epoll wait failure");
             continue;
         }
-
+        //iterates through the notifications it has received
         for (int n = 0; n < nfds; ++n) {
+            //if the fd is listenfd, accept the new connection and add it to the epoll
+
             if (events[n].data.fd == listenfd) {
                 int connfd = accept(listenfd, NULL, NULL);
                 if (connfd < 0) {
@@ -382,14 +391,12 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
             } else {
-                /*printf("fd: %d\n", events[n].data.fd);
-                print_queue(p.queue);
-                printf("Process Queue:\n");
-                print_queue(p.process_queue);*/
+                //otherwise, add the fd to the queue, as is has information to be processed.
+                //remove the fd from the epoll so that multiple threads cannot work on the same connection
+
                 ev.data.fd = events[n].data.fd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[n].data.fd, &ev) == -1) {
                     warn("epoll_ctl: processing connection %d", events[n].data.fd);
-                    return EXIT_FAILURE;
                 } else if (events[n].data.fd > 0) {
                     add_job(events[n].data.fd);
                 }
