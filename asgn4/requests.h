@@ -1,7 +1,7 @@
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
-#include "list.h"
+#include "node.h"
 
 struct request_line {
     char *method;

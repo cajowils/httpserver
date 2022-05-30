@@ -21,7 +21,7 @@
 #include "requests.h"
 #include "response.h"
 #include "helper.h"
-#include "list.h"
+#include "node.h"
 
 //takes a rsp and an error code and formats the response appropriately
 

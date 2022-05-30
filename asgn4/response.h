@@ -1,7 +1,7 @@
 #ifndef __RESPONSE_H__
 #define __RESPONSE_H__
 
-#include "list.h"
+#include "node.h"
 
 struct response_line {
     char *version;

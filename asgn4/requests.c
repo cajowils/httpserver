@@ -12,7 +12,7 @@
 
 #include "requests.h"
 #include "helper.h"
-#include "list.h"
+#include "node.h"
 
 struct request parse_request_regex(char *r, int size) {
     struct request req = new_request();

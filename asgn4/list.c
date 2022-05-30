@@ -7,48 +7,11 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <unistd.h>
+#include <err.h>
 
 #include "list.h"
-
-//Linked List
-
-///Roughly based off of Eugene's section code from my CSE13s Fall 2020 class
-
-//head: the first value of the header ("Content-Length")
-//val: the second value of the header ("100")
-//next: the next node of the list
-
-//starts with a dummy node as the head of the list
-
-Node *create_node(int head, int val) {
-    Node *n = (Node *) malloc(sizeof(Node));
-    n->next = NULL;
-    n->head = (char *) malloc(sizeof(char) * head + 1);
-    memset(n->head, '\0', head + 1);
-    n->val = (char *) malloc(sizeof(char) * val + 1);
-    memset(n->val, '\0', val + 1);
-    return n;
-}
-
-void delete_node(Node *n) {
-    free(n->head);
-    free(n->val);
-    free(n);
-    n = NULL;
-    return;
-}
-
-void delete_list(Node *head) {
-    if (head != NULL) {
-        Node *ptr = head;
-        Node *next;
-        do {
-            next = ptr->next;
-            delete_node(ptr);
-            ptr = next;
-        } while (next != NULL);
-    }
-}
+#include "requests.h"
+#include "response.h"
 
 //QueueNode
 
@@ -76,12 +39,14 @@ QueueNode *create_queue_node(int val) {
 
 void delete_queue_node(QueueNode *qn) {
     if (qn) {
-        if (qn->req_fd >= 0) {
-            close(qn->req_fd);
+        if (qn->rsp.fd >= 0) {
+            close(qn->rsp.fd);
         }
         if (qn->val >= 0) {
             close(qn->val);
         }
+        delete_request(qn->req);
+        delete_response(qn->rsp);
         qn->next = NULL;
         free(qn->buf);
         qn->buf = NULL;
@@ -90,3 +55,104 @@ void delete_queue_node(QueueNode *qn) {
     }
     return;
 }
+
+//DictNode
+
+//Dictionary Nodes to resolve hash collisions
+
+DictNode *find_dict_list(DictList *list, char *key) {
+    DictNode *head = list->head;
+    DictNode *ptr = head;
+    while (ptr != NULL) {
+        if (strncmp(ptr->key, key, 32) == 0) {
+            return ptr;
+        }
+        else {
+            ptr = ptr->next;
+        }
+    }
+    return NULL;
+}
+
+int insert_dict_list(DictList *list, DictNode *node) {
+    if (list->head == NULL) {
+        list->head = node;
+        list->head->next = NULL;
+        list->head->prev = NULL;
+    }
+    else {
+        node->next = list->head;
+        list->head->prev = node;
+        node->prev = NULL;
+        list->head = node;
+    }
+    return 1;
+}
+
+int delete_dict_list(DictList *list, DictNode *node) {
+    if (list->head == NULL || node == NULL) {
+        warnx("Delete from empty list or NULL node");
+        return -1;
+    }
+    if (list->head == node) {
+        list->head = node->next;
+    }
+    else {
+        node->prev->next = node->next;
+        if (node->next != NULL) {
+            node->next->prev = node->prev;
+        }
+    }
+    node->next = NULL;
+    node->prev = NULL;
+    node = NULL;
+    free(node);
+    return 1;
+}
+
+void print_dict_list(DictList *list) {
+    DictNode *ptr = list->head;
+    if (ptr) {
+        printf("List:");
+        while (ptr != NULL) {
+            printf(" %s ",ptr->key);
+            ptr = ptr->next;
+        }
+        printf("\n");
+    }
+    
+    return;
+}
+
+/*
+
+testlist:		list.o
+				$(CC) -o list list.o
+
+int main() {
+    DictNode **hashtable = (DictNode **)calloc(5, sizeof(DictNode));
+    char buf[32];
+    for (int i=0; i<5; i++) {
+        DictNode *new = (DictNode *)malloc(sizeof(DictNode));
+        snprintf(buf, 32, "Node %d", i);
+        memcpy(new->key, buf, 32);
+        insert_dict_list(&hashtable[0], new);
+    }
+    print_dict_list(&hashtable[0]);
+
+    DictNode *del = find_dict_list(&hashtable[0], "Node 2");
+
+    delete_dict_list(&hashtable[0], del);
+
+    print_dict_list(&hashtable[0]);
+
+    for (int i = 10; i>0;i--) {
+
+        snprintf(buf, 32, "Node %d", i);
+        DictNode *del = find_dict_list(&hashtable[0], buf);
+        delete_dict_list(&hashtable[0], del);
+        print_dict_list(&hashtable[0]);
+    }
+    return 1;
+}
+*/

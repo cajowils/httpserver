@@ -1,19 +1,9 @@
 #ifndef __LIST_H__
 #define __LIST_H__
 
-typedef struct Node Node;
+#include "requests.h"
+#include "response.h"
 
-struct Node {
-    char *head;
-    char *val;
-    Node *next;
-};
-
-Node *create_node(int head, int val);
-
-void delete_node(Node *n);
-
-void delete_list(Node *head);
 
 typedef struct QueueNode QueueNode;
 
@@ -22,12 +12,8 @@ struct QueueNode {
     int size;
     char *buf;
     int request;
-    int mode;
-    int body_read;
-    int body_size;
-    int body_start;
-    int req_fd;
-    int code;
+    struct request req;
+    struct response rsp;
     int flushed;
     QueueNode *next;
 };
@@ -35,5 +21,32 @@ struct QueueNode {
 QueueNode *create_queue_node(int val);
 
 void delete_queue_node(QueueNode *qn);
+
+
+typedef struct DictNode DictNode;
+
+struct DictNode {
+    char key[32];
+    void *value;
+    DictNode *next;
+    DictNode *prev;
+};
+
+typedef struct DictList DictList;
+
+struct DictList {
+    DictNode *head;
+};
+
+DictNode *find_dict_list(DictList *list, char *key);
+
+int insert_dict_list(DictList *list, DictNode *node);
+
+int delete_dict_list(DictList *list, DictNode *node);
+
+void print_dict_list(DictList *list);
+
+
+
 
 #endif

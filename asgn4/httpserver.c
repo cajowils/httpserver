@@ -71,11 +71,11 @@ int read_all(QueueNode *qn) {
 int write_all(QueueNode *qn) {
     //flushes the body that was read in with the request
     if (!qn->flushed) {
-        write(qn->req_fd, qn->buf + qn->body_start, qn->body_read);
+        write(qn->rsp.fd, qn->buf + qn->req.body_start, qn->req.body_read);
         qn->flushed = 1;
     }
 
-    int total_written = qn->body_read;
+    int total_written = qn->req.body_read;
 
     int bytes = 4096;
     int size = 0;
@@ -83,7 +83,7 @@ int write_all(QueueNode *qn) {
     int bytes_written = 0;
 
     int read_bytes
-        = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
+        = (qn->req.body_size - qn->req.body_read > bytes) ? bytes : qn->req.body_size - qn->req.body_read;
 
     //reads the bytes from the connfd and puts/appends them to a file
     //this implementation does not block, so it may come back to this function multiple times
@@ -94,65 +94,65 @@ int write_all(QueueNode *qn) {
             free(buf);
             return -1;
         }
-        bytes_written = write(qn->req_fd, buf, size);
+        bytes_written = write(qn->rsp.fd, buf, size);
         total_written += bytes_written;
-        qn->body_read += size;
+        qn->req.body_read += size;
         read_bytes
-            = (qn->body_size - qn->body_read > bytes) ? bytes : qn->body_size - qn->body_read;
-    } while (size > 0 && qn->body_read < qn->body_size);
+            = (qn->req.body_size - qn->req.body_read > bytes) ? bytes : qn->req.body_size - qn->req.body_read;
+    } while (size > 0 && qn->req.body_read < qn->req.body_size);
     //done reading the request
     free(buf);
     return 1;
 }
 
-void send_response(struct response rsp, int connfd) {
+void send_response(QueueNode *qn) {
 
-    int line_size = (int) strlen(rsp.line.version) + (int) strlen(rsp.line.phrase)
+    int line_size = (int) strlen(qn->rsp.line.version) + (int) strlen(qn->rsp.line.phrase)
                     + 8; //need 3 for the status code, 2 for spaces and 2 for the carriage return
     char *line_buf = (char *) malloc(sizeof(char) * line_size);
     memset(line_buf, '\0', line_size);
-    snprintf(line_buf, line_size, "%s %d %s\r\n", rsp.line.version, rsp.line.code, rsp.line.phrase);
-    write(connfd, line_buf, line_size - 1);
+    snprintf(line_buf, line_size, "%s %d %s\r\n", qn->rsp.line.version, qn->rsp.line.code, qn->rsp.line.phrase);
+    write(qn->val, line_buf, line_size - 1);
     free(line_buf);
 
-    Node *ptr = rsp.headers->next;
+    Node *ptr = qn->rsp.headers->next;
     while (ptr != NULL) {
         int header_size = (int) strlen(ptr->head) + (int) strlen(ptr->val)
                           + 5; //1 for colon, 1 for space, 2 for \r\n
         char *header_buf = (char *) malloc(sizeof(char) * header_size);
         memset(header_buf, '\0', header_size);
         snprintf(header_buf, header_size, "%s: %s\r\n", ptr->head, ptr->val);
-        write(connfd, header_buf, header_size - 1);
+        write(qn->val, header_buf, header_size - 1);
         ptr = ptr->next;
         free(header_buf);
     }
     char *creturn = "\r\n";
-    write(connfd, creturn, strlen(creturn));
+    write(qn->val, creturn, strlen(creturn));
 
-    if (rsp.mode == 0 && rsp.line.code == 200) { //checks that it is a successful GET request
+    if (qn->rsp.mode == 0 && qn->rsp.line.code == 200) { //checks that it is a successful GET request
         int size;
         int bytes = 4096;
         char buf2[bytes];
-        while ((size = read(rsp.fd, buf2, bytes)) > 0) {
-            write(connfd, buf2, size);
+        while ((size = read(qn->rsp.fd, buf2, bytes)) > 0) {
+            write(qn->val, buf2, size);
         }
     } else {
 
-        int phrase_size = (int) strlen(rsp.line.phrase) + 2; //1 for /n
+        int phrase_size = (int) strlen(qn->rsp.line.phrase) + 2; //1 for /n
         char *phrase_buf = (char *) malloc(sizeof(char) * phrase_size);
         memset(phrase_buf, '\0', phrase_size);
-        snprintf(phrase_buf, phrase_size, "%s\n", rsp.line.phrase);
-        write(connfd, phrase_buf, phrase_size - 1);
+        snprintf(phrase_buf, phrase_size, "%s\n", qn->rsp.line.phrase);
+        write(qn->val, phrase_buf, phrase_size - 1);
         free(phrase_buf);
     }
 
     return;
 }
 
-void log_request(struct request req, struct response rsp) {
+void log_request(QueueNode *qn) {
     pthread_mutex_lock(&log_lock);
-    if (req.line.method != NULL && req.line.URI != NULL) {
-        LOG("%s,/%s,%d,%d\n", req.line.method, req.line.URI, rsp.line.code, req.ID);
+    if (qn->req.line.method != NULL && qn->req.line.URI != NULL) {
+        LOG("%s,/%s,%d,%d\n", qn->req.line.method, qn->req.line.URI, qn->rsp.line.code, qn->req.ID);
         fflush(logfile);
     }
     pthread_mutex_unlock(&log_lock);
@@ -180,25 +180,16 @@ void handle_connection(QueueNode *qn) {
             qn->request = 1;
             // parse the buffer for all of the request information and put it in a request struct
 
-            struct request req = parse_request_regex(qn->buf, qn->size);
-            req.connfd = qn->val;
+            qn->req = parse_request_regex(qn->buf, qn->size);
 
             //process the request and format it into a response
-            struct response rsp = process_request(req);
+            qn->rsp = process_request(qn->req);
 
-            send_response(rsp, qn->val);
+            send_response(qn);
 
-            log_request(req, rsp);
+            log_request(qn);
 
-            qn->body_size = req.body_size;
-            qn->body_read = req.body_read;
-            qn->mode = rsp.mode;
-            qn->req_fd = rsp.fd;
-            qn->code = rsp.line.code;
-            qn->body_start = req.body_start;
-
-            delete_request(req);
-            delete_response(rsp);
+            
         } else {
             //if the read is blocked, add it to the process_queue to be processed later
             requeue_job(qn);
@@ -207,7 +198,7 @@ void handle_connection(QueueNode *qn) {
     }
     //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
     if (qn->request == 1) {
-        if ((qn->mode == 1 || qn->mode == 2) && (qn->code == 200 || qn->code == 201)) {
+        if ((qn->req.mode == 1 || qn->req.mode == 2) && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
             if (write_all(qn) != 1) {
                 requeue_job(qn);
                 return;
