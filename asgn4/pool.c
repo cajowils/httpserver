@@ -19,8 +19,11 @@ void initialze_pool(Pool *p, int num_threads, int queue_size) {
     p->threads = (pthread_t *) malloc(sizeof(pthread_t) * num_threads);
 
     pthread_mutex_init(&p->mutex, NULL);
+    pthread_mutex_init(&p->dict, NULL);
+
     pthread_cond_init(&p->cond, NULL);
     //pthread_cond_init(&p->full, NULL);
+    p->D = create(128);
 
     return;
 }
@@ -50,6 +53,7 @@ void destruct_pool(Pool *p) {
     delete_queue(p->process_queue);
 
     pthread_mutex_destroy(&p->mutex);
+    pthread_mutex_destroy(&p->dict);
     pthread_cond_destroy(&p->cond);
 
     return;

@@ -28,6 +28,8 @@
 #define DEFAULT_THREAD_COUNT 4
 #define REQUEST_LEN          4096
 #define MAX_CONNECTIONS      128
+#define READ                 0
+#define WRITE                1
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
@@ -70,9 +72,9 @@ int read_all(QueueNode *qn) {
 
 int write_all(QueueNode *qn) {
     //flushes the body that was read in with the request
-    if (!qn->flushed) {
+    if (!qn->rsp.flushed) {
         write(qn->rsp.fd, qn->buf + qn->req.body_start, qn->req.body_read);
-        qn->flushed = 1;
+        qn->rsp.flushed = 1;
     }
 
     int total_written = qn->req.body_read;
@@ -182,13 +184,10 @@ void handle_connection(QueueNode *qn) {
 
             qn->req = parse_request_regex(qn->buf, qn->size);
 
+
             //process the request and format it into a response
             qn->rsp = process_request(qn->req);
-
-            send_response(qn);
-
-            log_request(qn);
-
+            
             
         } else {
             //if the read is blocked, add it to the process_queue to be processed later
@@ -196,17 +195,60 @@ void handle_connection(QueueNode *qn) {
             return;
         }
     }
-    //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
-    if (qn->request == 1) {
-        if ((qn->req.mode == 1 || qn->req.mode == 2) && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
-            if (write_all(qn) != 1) {
-                requeue_job(qn);
+
+    /*
+    pthread_mutex_lock(&p.dict);
+    DictNode *node;
+    if ((node = find_dict(p.D, qn->req.line.URI)) != NULL) {
+        if (qn->op == READ) {
+            if (node->writing) {
+                requeue(node->queue, qn);
+                print_queue(node->queue);
                 return;
             }
+            else {
+                node->readers++;
+            }
         }
-        //request is done, so destroy the queue node
-        delete_queue_node(qn);
+        else if (qn->op == WRITE) {
+            if (node->writing || node->queue->size > 0 || node->readers > 0) {
+                requeue(node->queue, qn);
+                print_queue(node->queue);
+                return;
+            }
+            else {
+                node->writing = 1;
+            }
+        }
+        
     }
+    else {
+        insert(p.D, qn->req.line.URI);
+        node = find_dict(p.D, qn->req.line.URI);
+        if (qn->op == READ) {
+            node->readers++;
+        }
+        else if (qn->op == WRITE) {
+            node->writing = 1;
+        }
+
+    }
+    pthread_mutex_unlock(&p.dict);
+    */
+
+    //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
+    if ((qn->req.mode == 1 || qn->req.mode == 2) && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
+        if (write_all(qn) != 1) {
+            requeue_job(qn);
+            return;
+        }
+    }
+
+    send_response(qn);
+
+    log_request(qn);
+    //request is done, so destroy the queue node
+    delete_queue_node(qn);
 
     return;
 }

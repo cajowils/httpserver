@@ -1,15 +1,8 @@
 #ifndef __DICTIONARY_H__
 #define __DICTIONARY_H__
 
-#include "list.h"
+#include "dictlist.h"
 #include "queue.h"
-
-typedef struct element element;
-
-struct element {
-    char key[32];
-    Queue queue;
-};
 
 typedef struct dictionary dictionary;
 

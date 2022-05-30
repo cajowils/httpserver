@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "dictionary.h"
-#include "list.h"
+#include "dictlist.h"
 #include "queue.h"
 
 dictionary *create(int slots) {
@@ -29,7 +29,8 @@ int insert(dictionary *D, char *key) {
     DictNode *node = (DictNode *)malloc(sizeof(DictNode));
     memset(node->key, '\0', 32);
     memcpy(node->key, key, 32);
-    //node->value = e->value
+    node->queue = create_queue(128);
+
 
     node->prev = node->next = NULL;
 
