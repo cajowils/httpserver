@@ -11,7 +11,7 @@ dictionary *create(int slots) {
     dictionary *D = malloc(sizeof(dictionary));
     D->slots = slots;
     D->size = 0;
-    
+
     D->hash_table = (DictList *) calloc(slots, sizeof(DictList));
 
     for (int i = 0; i < D->slots; i++) {
@@ -26,22 +26,20 @@ int insert(dictionary *D, char *key) {
         return -1;
     }
 
-    DictNode *node = (DictNode *)malloc(sizeof(DictNode));
+    DictNode *node = (DictNode *) malloc(sizeof(DictNode));
     memset(node->key, '\0', 32);
     memcpy(node->key, key, 32);
     node->queue = create_queue(128);
-
 
     node->prev = node->next = NULL;
 
     int index = hash(key, D->slots);
 
     if (insert_dict_list(&(D->hash_table[index]), node)) {
-        D->size ++;
+        D->size++;
         return 1;
     }
     return -1;
-
 }
 
 int del(dictionary *D, char *key) {
@@ -52,7 +50,7 @@ int del(dictionary *D, char *key) {
     }
     int index = hash(key, D->slots);
     if (delete_dict_list(&(D->hash_table[index]), node)) {
-        D->size --;
+        D->size--;
         return 1;
     }
     return -1;
@@ -66,7 +64,7 @@ DictNode *find_dict(dictionary *D, char *key) {
 int hash(char key[32], int slots) {
     int num = 0;
     for (int i = 0; i < 32; i++) {
-        num += (int)key[i] * 7;
+        num += (int) key[i] * 7;
     }
     return num % slots;
 }

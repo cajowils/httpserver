@@ -73,7 +73,7 @@ int read_all(QueueNode *qn) {
 int write_all(QueueNode *qn) {
     //flushes the body that was read in with the request
     if (!qn->rsp.flushed) {
-        write(qn->rsp.fd, qn->buf + qn->req.body_start, qn->req.body_read);
+        write(qn->tmp, qn->buf + qn->req.body_start, qn->req.body_read);
         qn->rsp.flushed = 1;
     }
 
@@ -84,8 +84,9 @@ int write_all(QueueNode *qn) {
     char *buf = (char *) calloc(1, sizeof(char) * bytes);
     int bytes_written = 0;
 
-    int read_bytes
-        = (qn->req.body_size - qn->req.body_read > bytes) ? bytes : qn->req.body_size - qn->req.body_read;
+    int read_bytes = (qn->req.body_size - qn->req.body_read > bytes)
+                         ? bytes
+                         : qn->req.body_size - qn->req.body_read;
 
     //reads the bytes from the connfd and puts/appends them to a file
     //this implementation does not block, so it may come back to this function multiple times
@@ -96,11 +97,12 @@ int write_all(QueueNode *qn) {
             free(buf);
             return -1;
         }
-        bytes_written = write(qn->rsp.fd, buf, size);
+        bytes_written = write(qn->tmp, buf, size);
         total_written += bytes_written;
         qn->req.body_read += size;
-        read_bytes
-            = (qn->req.body_size - qn->req.body_read > bytes) ? bytes : qn->req.body_size - qn->req.body_read;
+        read_bytes = (qn->req.body_size - qn->req.body_read > bytes)
+                         ? bytes
+                         : qn->req.body_size - qn->req.body_read;
     } while (size > 0 && qn->req.body_read < qn->req.body_size);
     //done reading the request
     free(buf);
@@ -113,7 +115,8 @@ void send_response(QueueNode *qn) {
                     + 8; //need 3 for the status code, 2 for spaces and 2 for the carriage return
     char *line_buf = (char *) malloc(sizeof(char) * line_size);
     memset(line_buf, '\0', line_size);
-    snprintf(line_buf, line_size, "%s %d %s\r\n", qn->rsp.line.version, qn->rsp.line.code, qn->rsp.line.phrase);
+    snprintf(line_buf, line_size, "%s %d %s\r\n", qn->rsp.line.version, qn->rsp.line.code,
+        qn->rsp.line.phrase);
     write(qn->val, line_buf, line_size - 1);
     free(line_buf);
 
@@ -131,11 +134,12 @@ void send_response(QueueNode *qn) {
     char *creturn = "\r\n";
     write(qn->val, creturn, strlen(creturn));
 
-    if (qn->rsp.mode == 0 && qn->rsp.line.code == 200) { //checks that it is a successful GET request
-        int size;
+    if (qn->rsp.mode == 0
+        && qn->rsp.line.code == 200) { //checks that it is a successful GET request
+        int size = 0;
         int bytes = 4096;
         char buf2[bytes];
-        while ((size = read(qn->rsp.fd, buf2, bytes)) > 0) {
+        while ((size = read(qn->tmp, buf2, bytes)) > 0) {
             write(qn->val, buf2, size);
         }
     } else {
@@ -175,6 +179,19 @@ void requeue_job(QueueNode *qn) {
     return;
 }
 
+void copy_file(int dest, int source) {
+    lseek(source, 0, SEEK_SET);
+    char buf[BUF_SIZE];
+    int size = 0;
+    int bytes = 0;
+
+    while ((size = read(source, buf, BUF_SIZE)) > 0) {
+        bytes = write(dest, buf, size);
+    };
+
+    return;
+}
+
 void handle_connection(QueueNode *qn) {
     if (qn->request != 1) {
         //checks that the request is fully read, otherwise proceeds to read it
@@ -184,11 +201,45 @@ void handle_connection(QueueNode *qn) {
 
             qn->req = parse_request_regex(qn->buf, qn->size);
 
-
             //process the request and format it into a response
             qn->rsp = process_request(qn->req);
-            
-            
+
+            //make temp file
+
+            /*
+            if mode == GET or APPEND {
+                lock(file)
+                flush file into temp
+                unlock(file)
+            }
+
+            */
+            if ((qn->tmp = mkstemp(qn->tmp_name)) == -1) {
+                perror("error creating tmp");
+            }
+            unlink(qn->tmp_name);
+
+            if (qn->rsp.mode == 0 || qn->rsp.mode == 2) {
+                flock(qn->rsp.fd, LOCK_EX);
+                copy_file(qn->tmp, qn->rsp.fd);
+                flock(qn->rsp.fd, LOCK_UN);
+            }
+
+            switch (qn->rsp.mode) {
+            case 0: {
+                lseek(qn->tmp, 0, SEEK_SET);
+                break;
+            }
+            case 1: {
+                lseek(qn->tmp, 0, SEEK_SET);
+                break;
+            }
+            case 2: {
+                lseek(qn->tmp, 0, SEEK_CUR);
+                break;
+            }
+            }
+
         } else {
             //if the read is blocked, add it to the process_queue to be processed later
             requeue_job(qn);
@@ -196,48 +247,11 @@ void handle_connection(QueueNode *qn) {
         }
     }
 
-    /*
-    pthread_mutex_lock(&p.dict);
-    DictNode *node;
-    if ((node = find_dict(p.D, qn->req.line.URI)) != NULL) {
-        if (qn->op == READ) {
-            if (node->writing) {
-                requeue(node->queue, qn);
-                print_queue(node->queue);
-                return;
-            }
-            else {
-                node->readers++;
-            }
-        }
-        else if (qn->op == WRITE) {
-            if (node->writing || node->queue->size > 0 || node->readers > 0) {
-                requeue(node->queue, qn);
-                print_queue(node->queue);
-                return;
-            }
-            else {
-                node->writing = 1;
-            }
-        }
-        
-    }
-    else {
-        insert(p.D, qn->req.line.URI);
-        node = find_dict(p.D, qn->req.line.URI);
-        if (qn->op == READ) {
-            node->readers++;
-        }
-        else if (qn->op == WRITE) {
-            node->writing = 1;
-        }
-
-    }
-    pthread_mutex_unlock(&p.dict);
-    */
+    //write_all to temp file
 
     //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
-    if ((qn->req.mode == 1 || qn->req.mode == 2) && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
+    if ((qn->req.mode == 1 || qn->req.mode == 2)
+        && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
         if (write_all(qn) != 1) {
             requeue_job(qn);
             return;
@@ -246,7 +260,11 @@ void handle_connection(QueueNode *qn) {
 
     send_response(qn);
 
+    flock(qn->rsp.fd, LOCK_EX);
+    copy_file(qn->rsp.fd, qn->tmp);
     log_request(qn);
+    flock(qn->rsp.fd, LOCK_UN);
+
     //request is done, so destroy the queue node
     delete_queue_node(qn);
 

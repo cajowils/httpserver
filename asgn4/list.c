@@ -34,6 +34,10 @@ QueueNode *create_queue_node(int val) {
     qn->next = NULL;
     qn->request = 0;
     qn->op = -1;
+    qn->tmp = -1;
+    qn->tmp_name = (char *) malloc(sizeof(char) * 10);
+    memset(qn->tmp_name, '\0', 10);
+    memcpy(qn->tmp_name, "tmp_XXXXXX", 10);
     return qn;
 }
 
@@ -45,14 +49,18 @@ void delete_queue_node(QueueNode *qn) {
         if (qn->val >= 0) {
             close(qn->val);
         }
+        if (qn->tmp >= 0) {
+            close(qn->tmp);
+        }
         delete_request(qn->req);
         delete_response(qn->rsp);
         qn->next = NULL;
         free(qn->buf);
         qn->buf = NULL;
+        free(qn->tmp_name);
+        qn->tmp_name = NULL;
         free(qn);
         qn = NULL;
     }
     return;
 }
-

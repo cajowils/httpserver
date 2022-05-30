@@ -7,10 +7,10 @@
 typedef struct dictionary dictionary;
 
 struct dictionary {
-    int        slots;
-    int        size;
-    DictList     *hash_table;
-};  
+    int slots;
+    int size;
+    DictList *hash_table;
+};
 
 dictionary *create(int slots);
 
@@ -22,9 +22,8 @@ DictNode *find_dict(dictionary *D, char *key);
 
 int hash(char key[32], int slots);
 
-int destruct(dictionary* D);
+int destruct(dictionary *D);
 
-void print_dict(dictionary* D);
-
+void print_dict(dictionary *D);
 
 #endif

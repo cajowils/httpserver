@@ -23,7 +23,6 @@ void initialze_pool(Pool *p, int num_threads, int queue_size) {
 
     pthread_cond_init(&p->cond, NULL);
     //pthread_cond_init(&p->full, NULL);
-    p->D = create(128);
 
     return;
 }

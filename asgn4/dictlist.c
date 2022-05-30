@@ -21,8 +21,7 @@ DictNode *find_dict_list(DictList *list, char *key) {
     while (ptr != NULL) {
         if (strncmp(ptr->key, key, 32) == 0) {
             return ptr;
-        }
-        else {
+        } else {
             ptr = ptr->next;
         }
     }
@@ -34,8 +33,7 @@ int insert_dict_list(DictList *list, DictNode *node) {
         list->head = node;
         list->head->next = NULL;
         list->head->prev = NULL;
-    }
-    else {
+    } else {
         node->next = list->head;
         list->head->prev = node;
         node->prev = NULL;
@@ -51,8 +49,7 @@ int delete_dict_list(DictList *list, DictNode *node) {
     }
     if (list->head == node) {
         list->head = node->next;
-    }
-    else {
+    } else {
         node->prev->next = node->next;
         if (node->next != NULL) {
             node->next->prev = node->prev;
@@ -70,12 +67,12 @@ void print_dict_list(DictList *list) {
     if (ptr) {
         printf("List:");
         while (ptr != NULL) {
-            printf(" %s ",ptr->key);
+            printf(" %s ", ptr->key);
             ptr = ptr->next;
         }
         printf("\n");
     }
-    
+
     return;
 }
 

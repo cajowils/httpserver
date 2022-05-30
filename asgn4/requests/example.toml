@@ -29,6 +29,11 @@ id = 2
 type = "SEND_ALL"
 id = 2
 
+# Wait for R2 to complete.
+[[events]]
+type = "WAIT"
+id = 2
+
 
 # Send R1's message body.
 [[events]]
@@ -39,8 +44,3 @@ id = 1
 [[events]]
 type = "WAIT"
 id = 1
-
-# Wait for R2 to complete.
-[[events]]
-type = "WAIT"
-id = 2

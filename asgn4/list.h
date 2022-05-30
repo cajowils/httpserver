@@ -4,7 +4,6 @@
 #include "requests.h"
 #include "response.h"
 
-
 typedef struct QueueNode QueueNode;
 
 struct QueueNode {
@@ -13,6 +12,8 @@ struct QueueNode {
     char *buf;
     int request;
     int op;
+    char *tmp_name;
+    int tmp;
     struct request req;
     struct response rsp;
     QueueNode *next;
@@ -21,6 +22,5 @@ struct QueueNode {
 QueueNode *create_queue_node(int val);
 
 void delete_queue_node(QueueNode *qn);
-
 
 #endif

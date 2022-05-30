@@ -171,7 +171,7 @@ struct response
     APPEND(struct response rsp, struct request req) {
 
     errno = 0;
-    rsp.fd = open(req.line.URI, O_WRONLY | O_APPEND);
+    rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
     switch (errno) {
     case 0: {
         break;

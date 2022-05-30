@@ -19,7 +19,6 @@ struct Pool {
     pthread_cond_t cond;
     pthread_cond_t full;
     dictionary *D;
-
 };
 
 void initialze_pool(Pool *p, int num_threads, int queue_size);
