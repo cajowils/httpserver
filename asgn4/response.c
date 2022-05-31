@@ -133,11 +133,11 @@ struct response
     errno = 0;
 
     if (access(req.line.URI, F_OK) == 0) {
-        rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
+        rsp.fd = open(req.line.URI, O_WRONLY);
         s = 200;
     } else {
         errno = 0;
-        rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT | O_TRUNC);
+        rsp.fd = open(req.line.URI, O_WRONLY | O_CREAT);
         s = 201;
     }
 
@@ -171,7 +171,7 @@ struct response
     APPEND(struct response rsp, struct request req) {
 
     errno = 0;
-    rsp.fd = open(req.line.URI, O_WRONLY | O_TRUNC);
+    rsp.fd = open(req.line.URI, O_RDWR);
     switch (errno) {
     case 0: {
         break;

@@ -27,7 +27,7 @@ class Req_Method(Enum):
 class request():
     ''' Reprsents a new connection with a client '''
 
-    response_regex = re.compile(b"HTTP/1.1 (.*) (.*)\r\n")
+    response_regex = re.compile(b"HTTP/1.1 ([^ ]*) (.*)\r\n")
 
     def __init__(self, hostname, port, method, uri, rid, inbody, outfile):
         '''
@@ -67,6 +67,8 @@ class request():
         self.state = Req_State.CONNECTED
         self.received = bytearray()
 
+        self.partial_flag = False
+
 
     def send_line(self):
         assert (self.state == Req_State.CONNECTED)
@@ -85,11 +87,11 @@ class request():
         start = self.sent
         end = self.sent + size
 
-        if size == -1 or len(self.bytez[-1]) - self.sent > size:
-            end = -1
-            self.sent = len(self.bytez[-1])
+        if size == -1 or len(self.bytez[-1]) - self.sent < size:
+            end = len(self.bytez[-1])
 
         self.sock.sendall(self.bytez[-1][start : end])
+        self.sent = end
 
         if len(self.bytez[-1]) == self.sent:
             self.state = Req_State.SENT
@@ -97,14 +99,15 @@ class request():
             return self.sock
         else:
             self.state = Req_State.SENDING_BODY
-            self.sent += size
+
         return None
 
-    def recv_data(self):
+    def recv_data(self, size = 4096):
         if self.state != Req_State.SENT:
             print(f"what are you!? {self.state}", file=sys.stderr)
         assert (self.state == Req_State.SENT)
-        data = self.sock.recv(4096)
+
+        data = self.sock.recv(size)
 
         if data:
             self.received.extend(data)
@@ -118,7 +121,6 @@ class request():
         assert (self.state == Req_State.SENT or\
                 self.state == Req_State.RECEIVED)
 
-        ## now, parse that shit
         match = re.match(request.response_regex, self.received)
         code = -1
         if match:
@@ -175,9 +177,7 @@ def log(event, id, *argv):
     fields = [stamp, event, id]
     if argv:
         fields.extend(argv)
-    if event == "CONNECT" or event == "SENT" or\
-       event == "RECEIVED" or event == "WAIT":
-        log_events.append(fields)
+    log_events.append(fields)
 
 def flush_log():
     for l in log_events:
@@ -233,15 +233,18 @@ def main():
 
         if event["type"] == "LOAD":
             load(event)
+            log("LOAD", f'{event["infile"]}, {event["outfile"]}')
 
         elif event["type"] == "UNLOAD":
             unload(event)
+            log("UNLOAD", f'{event["file"]}')
 
         elif event["type"] == "SLEEP":
             seconds = 4
             if "seconds" in event:
                 seconds = event["seconds"]
             time.sleep(seconds)
+            log("SLEEP", seconds)
 
         elif event["type"] == "CREATE":
             request = create(rid, event, args.hostname, args.port, outdir)
@@ -265,7 +268,7 @@ def main():
             if sock != None:
                 poller.register(sock.fileno(), select.EPOLLIN)
                 receivers[sock.fileno()] = requests[rid]
-                log("SENT", rid)
+                log("SENT_BODY", rid)
 
         elif event["type"] == "SEND_ALL":
             requests[rid].send_line()
@@ -273,14 +276,21 @@ def main():
             sock = requests[rid].send_body(-1)
             poller.register(sock.fileno(), select.EPOLLIN)
             receivers[sock.fileno()] = requests[rid]
-            log("SEND_BODY", rid)
+            log("SEND_ALL", rid)
+
+        elif event["type"] == "RECV_PARTIAL":
+            requests[rid].partial_flag = True
+            requests[rid].state = Req_State.SENT
+            requests[rid].recv_data(event["size"])
+            requests[rid].sock.shutdown(socket.SHUT_WR)
 
         elif event["type"] == "WAIT":
             req = requests[rid]
             fd = req.sock.fileno()
             if fd > 0:
-                poller.unregister(fd)
-                del receivers[fd]
+                if not requests[rid].partial_flag:
+                    poller.unregister(fd)
+                    del receivers[fd]
 
                 while not req.recv_data():
                     pass
@@ -291,7 +301,7 @@ def main():
             del requests[rid]
 
         else:
-            print(f"That event, Oliver, is an imposter: {event.type}")
+            print(f"That event, Oliver, is an imposter: {event}")
 
     flush_log()
 

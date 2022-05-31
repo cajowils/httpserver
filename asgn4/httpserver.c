@@ -81,7 +81,7 @@ int write_all(QueueNode *qn) {
 
     int bytes = 4096;
     int size = 0;
-    char *buf = (char *) calloc(1, sizeof(char) * bytes);
+    char *buf = (char *) calloc(BUF_SIZE, sizeof(char));
     int bytes_written = 0;
 
     int read_bytes = (qn->req.body_size - qn->req.body_read > bytes)
@@ -137,9 +137,10 @@ void send_response(QueueNode *qn) {
     if (qn->rsp.mode == 0
         && qn->rsp.line.code == 200) { //checks that it is a successful GET request
         int size = 0;
-        int bytes = 4096;
-        char buf2[bytes];
-        while ((size = read(qn->tmp, buf2, bytes)) > 0) {
+        char *buf2 = (char *) calloc(BUF_SIZE, sizeof(char));
+        memset(buf2, '\0', BUF_SIZE);
+
+        while ((size = read(qn->tmp, buf2, BUF_SIZE)) > 0) {
             write(qn->val, buf2, size);
         }
     } else {
@@ -181,7 +182,8 @@ void requeue_job(QueueNode *qn) {
 
 void copy_file(int dest, int source) {
     lseek(source, 0, SEEK_SET);
-    char buf[BUF_SIZE];
+    char *buf = (char *) calloc(BUF_SIZE, sizeof(char));
+    memset(buf, '\0', BUF_SIZE);
     int size = 0;
     int bytes = 0;
 
@@ -189,6 +191,7 @@ void copy_file(int dest, int source) {
         bytes = write(dest, buf, size);
     };
 
+    free(buf);
     return;
 }
 

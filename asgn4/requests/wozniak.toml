@@ -1,7 +1,7 @@
 [[events]]
 type = "CREATE"
 method = "PUT"
-uri = "output/wozniak/wozniak.txt"
+uri = "tests/wozniak.txt"
 infile = "files/bible.txt"
 id = 1
 
@@ -21,7 +21,7 @@ id = 1
 [[events]]
 type = "CREATE"
 method = "GET"
-uri = "output/wozniak/wozniak.txt"
+uri = "tests/wozniak.txt"
 id = 2
 
 [[events]]
