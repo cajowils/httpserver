@@ -1,0 +1,2 @@
+PUT,/foo.txt,200,0
+GET,/foo.txt,200,0

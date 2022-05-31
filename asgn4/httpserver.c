@@ -141,6 +141,7 @@ void send_response(QueueNode *qn) {
         while ((size = read(qn->tmp, buf2, BUF_SIZE)) > 0) {
             write(qn->val, buf2, size);
         }
+        free(buf2);
     } else {
 
         int phrase_size = (int) strlen(qn->rsp.line.phrase) + 2; //1 for /n

@@ -23,6 +23,8 @@
 //next: pointer to the next node in the queue/list
 //request: indicates whether the request is ready to be parsed
 //flushed: indicates whether the body that was read in with the request has already been flushed to the file
+//tmp: the fd for the temporary file
+//tmp_name: the name of the temporary file
 //also keeps other information captured by request and response structs that are useful for storing later
 
 QueueNode *create_queue_node(int val) {
