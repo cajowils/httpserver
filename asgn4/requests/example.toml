@@ -2,8 +2,8 @@
 [[events]]
 type = "CREATE"
 method = "PUT"
-uri = "bible.txt"
-infile= "files/bible.txt"
+uri = "tests/example.txt"
+infile= "tests/test7.txt"
 id = 1
 
 # Send R1's request line.
@@ -21,7 +21,7 @@ id = 1
 [[events]]
 type = "CREATE"
 method = "GET"
-uri = "bible.txt"
+uri = "tests/test7.txt"
 id = 2
 
 # Send entirety of R2.
