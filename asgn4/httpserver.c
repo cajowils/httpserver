@@ -257,10 +257,12 @@ void handle_connection(QueueNode *qn) {
         flock(qn->rsp.fd, LOCK_EX);
         ftruncate(qn->rsp.fd, 0);
         copy_file(qn->rsp.fd, qn->tmp);
-        log_request(qn);
+    }
+    log_request(qn);
+
+    if (qn->req.mode == 1 || qn->req.mode == 2) {
         flock(qn->rsp.fd, LOCK_UN);
     }
-
     send_response(qn);
 
     //request is done, so destroy the queue node

@@ -1,8 +1,2 @@
-PUT,/tests/wozniak.txt,200,1
-PUT,/tests/newton.txt,200,1
-PUT,/tests/newton.txt,200,2
-PUT,/tests/newton.txt,200,3
-PUT,/tests/newton.txt,200,4
-PUT,/tests/newton.txt,200,5
+GET,/tests/borg.txt,200,2
 APPEND,/tests/borg.txt,200,1
-PUT,/tests/wozniak.txt,200,1
