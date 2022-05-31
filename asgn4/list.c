@@ -35,8 +35,8 @@ QueueNode *create_queue_node(int val) {
     qn->request = 0;
     qn->op = -1;
     qn->tmp = -1;
-    qn->tmp_name = (char *) malloc(sizeof(char) * 10);
-    memset(qn->tmp_name, '\0', 10);
+    qn->tmp_name = (char *) malloc(sizeof(char) * 11);
+    memset(qn->tmp_name, '\0', 11);
     memcpy(qn->tmp_name, "tmp_XXXXXX", 10);
     return qn;
 }

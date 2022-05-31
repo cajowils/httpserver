@@ -1,0 +1,89 @@
+[[events]]
+type = "CREATE"
+method = "PUT"
+uri = "tests/newton.txt"
+infile = "tests/test1.txt"
+id = 1
+
+
+[[events]]
+type = "CREATE"
+method = "PUT"
+uri = "tests/newton.txt"
+infile = "tests/test2.txt"
+id = 2
+
+[[events]]
+type = "CREATE"
+method = "PUT"
+uri = "tests/newton.txt"
+infile = "tests/test3.txt"
+id = 3
+
+[[events]]
+type = "CREATE"
+method = "PUT"
+uri = "tests/newton.txt"
+infile = "tests/test4.txt"
+id = 4
+
+[[events]]
+type = "CREATE"
+method = "PUT"
+uri = "tests/newton.txt"
+infile = "tests/test5.txt"
+id = 5
+
+[[events]]
+type = "SEND_ALL"
+id = 1
+
+[[events]]
+type = "SEND_ALL"
+id = 2
+
+[[events]]
+type = "SEND_ALL"
+id = 3
+
+[[events]]
+type = "SEND_ALL"
+id = 4
+
+[[events]]
+type = "SEND_ALL"
+id = 5
+
+[[events]]
+type = "WAIT"
+id = 1
+
+[[events]]
+type = "WAIT"
+id = 2
+
+[[events]]
+type = "WAIT"
+id = 3
+
+[[events]]
+type = "WAIT"
+id = 4
+
+[[events]]
+type = "WAIT"
+id = 5
+
+[[events]]
+type = "CREATE"
+method = "GET"
+uri = "tests/newton.txt"
+id = 6
+
+[[events]]
+type = "SEND_ALL"
+id = 6
+
+[[events]]
+type = "WAIT"
+id = 6

@@ -1,2 +1,6 @@
-GET,/bible.txt,200,2
-PUT,/bible.txt,200,1
+PUT,/tests/newton.txt,200,1
+PUT,/tests/newton.txt,200,2
+PUT,/tests/newton.txt,200,3
+PUT,/tests/newton.txt,200,4
+PUT,/tests/newton.txt,200,5
+GET,/tests/newton.txt,200,6
