@@ -264,7 +264,7 @@ void handle_connection(QueueNode *qn) {
     send_response(qn);
 
     flock(qn->rsp.fd, LOCK_EX);
-    if (qn->rsp.mode == 1) {
+    if (qn->rsp.mode == 1 || qn->rsp.mode == 2) {
         ftruncate(qn->rsp.fd, 0);
     }
     copy_file(qn->rsp.fd, qn->tmp);
