@@ -11,7 +11,6 @@ struct QueueNode {
     int size;
     char *buf;
     int request;
-    int op;
     char *tmp_name;
     int tmp;
     struct request req;

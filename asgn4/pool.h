@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <sys/epoll.h>
 #include "queue.h"
-#include "dictionary.h"
 
 typedef struct Pool Pool;
 
@@ -18,7 +17,6 @@ struct Pool {
     pthread_mutex_t dict;
     pthread_cond_t cond;
     pthread_cond_t full;
-    dictionary *D;
 };
 
 void initialze_pool(Pool *p, int num_threads, int queue_size);

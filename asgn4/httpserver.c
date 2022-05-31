@@ -28,8 +28,6 @@
 #define DEFAULT_THREAD_COUNT 4
 #define REQUEST_LEN          4096
 #define MAX_CONNECTIONS      128
-#define READ                 0
-#define WRITE                1
 
 static FILE *logfile;
 #define LOG(...) fprintf(logfile, __VA_ARGS__);
@@ -257,12 +255,12 @@ void handle_connection(QueueNode *qn) {
         flock(qn->rsp.fd, LOCK_EX);
         ftruncate(qn->rsp.fd, 0);
         copy_file(qn->rsp.fd, qn->tmp);
-    }
-    log_request(qn);
-
-    if (qn->req.mode == 1 || qn->req.mode == 2) {
+        log_request(qn);
         flock(qn->rsp.fd, LOCK_UN);
+    } else {
+        log_request(qn);
     }
+
     send_response(qn);
 
     //request is done, so destroy the queue node
