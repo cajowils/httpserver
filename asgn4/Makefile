@@ -2,14 +2,10 @@ CFLAGS=-Wall -Wextra -Werror -pedantic -g
 CC=clang $(CFLAGS)
 
 
-httpserver:		httpserver.o requests.o response.o helper.o queue.o list.o pool.o node.o dictionary.o dictlist.o
-				$(CC) -o httpserver httpserver.o requests.o response.o helper.o queue.o list.o pool.o node.o dictionary.o dictlist.o -pthread
+httpserver:		httpserver.o requests.o response.o helper.o queue.o list.o pool.o node.o
+				$(CC) -o httpserver httpserver.o requests.o response.o helper.o queue.o list.o pool.o node.o -pthread
 httpserver.o:	requests.h response.h helper.h list.h httpserver.c
 				$(CC) -c httpserver.c
-dictionary.o:	dictionary.h dictlist.h dictionary.c dictlist.c
-				$(CC) -c dictionary.c
-dictlist.o:		dictlist.h queue.h dictlist.c queue.c
-				$(CC) -c dictlist.c
 queue.o:		queue.h list.h queue.c list.c
 				$(CC) -c queue.c
 list.o:			list.h requests.h response.h list.c requests.c response.c
@@ -20,7 +16,7 @@ response.o:		response.h requests.h helper.h node.h response.c httpserver.c node.
 				$(CC) -c response.c httpserver.c
 helper.o:		helper.h helper.c
 				$(CC) -c helper.c
-pool.o:			pool.h queue.h dictionary.h pool.c
+pool.o:			pool.h queue.h pool.c
 				$(CC) -c pool.c
 node.o:			node.h node.c
 				$(CC) -c node.c

@@ -207,27 +207,20 @@ void handle_connection(QueueNode *qn) {
             //process the request and format it into a response
             qn->rsp = process_request(qn->req);
 
-            //make temp file
-
-            /*
-            if mode == GET or APPEND {
-                lock(file)
-                flush file into temp
-                unlock(file)
-            }
-
-            */
+            //create a temporary file to store the current state of the file
             if ((qn->tmp = mkstemp(qn->tmp_name)) == -1) {
                 perror("error creating tmp");
             }
-            unlink(qn->tmp_name);
+            unlink(qn->tmp_name); //deletes file automatically
 
+            //reads the content of the file into the temporary file
             if (qn->rsp.mode == 0 || qn->rsp.mode == 2) {
                 flock(qn->rsp.fd, LOCK_EX);
                 copy_file(qn->tmp, qn->rsp.fd);
                 flock(qn->rsp.fd, LOCK_UN);
             }
 
+            //sets the temp file pointer to either the start (GET, PUT) or end (APPEND)
             switch (qn->rsp.mode) {
             case 0: {
                 lseek(qn->tmp, 0, SEEK_SET);
@@ -252,24 +245,23 @@ void handle_connection(QueueNode *qn) {
 
     //write_all to temp file
 
-    //if the request is already processed, and it is a successful PUT/APPEND, continue to write the contents to the file
+    //if the request is already processed, and it is a successful PUT/APPEND
+    //continue to write the contents to the tempfile
     if ((qn->req.mode == 1 || qn->req.mode == 2)
         && (qn->rsp.line.code == 200 || qn->rsp.line.code == 201)) {
         if (write_all(qn) != 1) {
             requeue_job(qn);
             return;
         }
+
+        flock(qn->rsp.fd, LOCK_EX);
+        ftruncate(qn->rsp.fd, 0);
+        copy_file(qn->rsp.fd, qn->tmp);
+        log_request(qn);
+        flock(qn->rsp.fd, LOCK_UN);
     }
 
     send_response(qn);
-
-    flock(qn->rsp.fd, LOCK_EX);
-    if (qn->rsp.mode == 1 || qn->rsp.mode == 2) {
-        ftruncate(qn->rsp.fd, 0);
-    }
-    copy_file(qn->rsp.fd, qn->tmp);
-    log_request(qn);
-    flock(qn->rsp.fd, LOCK_UN);
 
     //request is done, so destroy the queue node
     delete_queue_node(qn);
