@@ -1,4 +1,4 @@
-# Assignments 1,2,3 - HTTP Server
+# Assignments 1,2,3,4 - HTTP Server
 
 This program establishes a local connection through a port, from which HTTP requests/responses can be exchanged. It uses three methods to communicate with the client:
 + GET - The client requests the contents of a file from the server
@@ -18,6 +18,8 @@ In Assignment 2, I made some very small changes to my Assignment 1 Code by addin
 
 In Assignment 3, I added multithreading and non-blocking IO to optimize the throughput of my program.
 
+In Assignment 4, I implemented file locks to maintain atomicity in my server.
+
 Below, I will share the details of my HTTP server and outline the steps in this iterative approach
 
 ## Getting Started
@@ -26,7 +28,7 @@ To run this program, you might find it helpful to use two terminal windows. In t
 In the next window, you can test a request with Netcat. To do this, type in 
 
     echo -e -n "GET /foo.txt HTTP/1.1\r\n\r\n"
-    | nc localhost <port-number> -l <logfile> -t <number of threads>
+    | nc localhost <port-number>
 If you have foo.txt in the same directory as httpserver, then you should receive a 200 OK response, along with the contents of foo.txt
 
 ## Data Structures
@@ -68,9 +70,10 @@ I've made a second linked list node struct that contain information about each c
 Here is some of the information that each node keeps track of:
 * val - the fd of the connection
 * buf - buffer to store the current request read in so far
-* mode - the type of request (GET, PUT, APPEND)
-* body_read - how much of the body has been read in
-* req_fd - the fd for the file of interest
+* tmp - file descriptor for the temporary file created
+* tmp_name - a string that stores the name of the temporary file
+* req - the request struct
+* rsp - the response struct
 * next - pointer to the next node in the list/queue
 
 ### Queue Struct
@@ -166,6 +169,10 @@ Searches through a linked-list (or linked-queue) for a specific connfd. If it is
 
 Standard queue operations. Difference between enqueue() and requeue() is that enqueue() takes a connfd and makes a new node to add to the queue, whereas requeue() takes an existing node and adds it to the queue.
 
+### copy_file()
+
+I made this function to copy the contents of one file to another. It uses a while loop to read the source file into a buffer and then writes the buffer into the destination file.
+
 
 ## Changes for Assignment 2
 In Assignment 2, we have been tasked with taking in not only the port number, but also the number of threads and the file in which to store the log.
@@ -206,6 +213,22 @@ In order to add this functionality, I had to make some changes to my dispatcher 
 
 In order to clean everything up once the program ends, I had to destruct the thread pool in the signal handler. This signals all the threads to stop running with a broadcast signal, joins them, then frees them. It also frees the queues and destroys the locks and conditional variables. To make the threads exit successfully, I used a variable "running" in my thread handler to have the ability to stop the while() loop.
 
+## Changes for Assignment 4
+
+In assignment 4, our goal was to add atomicity to our server. This involved protecting reads and writes on the same file from overwriting one another. I had an idea involving a hashmap made up of queues originally, but I realized that it would have blocked every request after a write on the same URI until the write is finished, which is not a good idea for a server.
+
+### File Locks
+
+Instead, I chose to use flock() to provide some mutual exclusion when reading and writing to files. Whenever I want to read/write, I can flock() that file and copy the contents into a temporary file. This makes the server more efficient, as the critical region is smaller and other requests on that file can proceed without having to wait for one thread to finish. Otherwise, if I were to lock a file without using a temp, all other requests on the same URI would be blocked until that file is finished.
+
+### Atomicity & Optimization
+
+In order to efficiently implement atomicty, I wanted to have as small of a critical region as possible, as to avoid unnecessary waiting in the other threads. This is why the temp-file method is so effective for my implementation. It is able to caputure the file at one point in time, complete the modifications/readings, and then write the file all at once, after everything is completed. This avoids dependancy on things such as server speeds, connection latency, and eliminates a lot of data races from my program.
+
+### The Specifics
+
+Most of my changes were made in handle_connection. I ended up using a sneaky approach that minimzed changes to the system by tricking my program into thinking it was viewing or modifying the requested file, but it was only in control of the temporary file. I had to be more careful when opening files, as I learned when I discovered a bug that sometimes a file's content would be deleted if a PUT request to the same URI happened in the middle of the original one. I solved this by using opening the file normally with RDWR permissions, then calling ftruncate() once in the critical region to replace the contents of the file.
+
 ## Reflection
 
 Assignment 1 was a doozy. I've spent more time on this than any other project I've had to work on in the past. That being said, I found it to be incredibly insightful and rewarding. I took Dr. Quinn's advice and approached this with a mix between "Top-Down" and "Bottom-Up" modularity, and found success in this. I was able to explore the requirements of the task and put together the modules as I went.
@@ -218,8 +241,12 @@ In Assignment 2, I did some cleaning to allow for better modularity and clearer 
 
 In Asssignment 3, I reworked a lot of my previous code in order to implement non-blocking IO. I was able to handle multi-threading without changing too much, but once I had to pause a connection and store its information, thats's where things got tricky. The most challenging part was definitely getting everything to work together. There are a lot of functions being used and having multiple threads made it hard to keep track of where the program was at any given point. Debugging was a struggle because there are so many moving parts and a lot of non-determinism. What I mean by that is that sometimes bugs would appear in a scenario, but othertimes not. It made the process difficult because I couldn't always see the result of a bug, making it hard to track down. I found gdb to be helpful, as well as the toml files and test scripts that students posted in the Discord. All in all, I learned a lot in this assignment, and I have a much better understanding of how HTTP servers really work.
 
+In Assignment 4, it took some careful strategizing before I wrote any code to be able to implement atomicity effectively. As i mentioned before, I had spent a few days designing a solution using dictionaries and queues, but I realized once I started testing that it was ultimately a bad idea due to the blocking consequences. This led me to do a complete U-Turn, and I had to spend some time thinking about how I could have a GET request safely execute in the middle of a write operation. I then started thinking about writing to temporary files, and using flock() was the obvious next step for adding file-specific mutual-exclusion.
+
+Overall, the amount I learned in this assignment was greater than any other class I've ever had. I've spent countless hours coding this quarter, but I feel like the effort was worth it as I was able to combine a lot of the skills I already had and apply them in new ways. Looking back, I would have made things a lot cleaner, probably combining the request and response structs into one data structure, making the send_response() feel less cluttered, and using less files.
+
 ## Collaboration
-In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the asgn1-general discord, and spoke to tutors and TAs about problems/ideas for my implementation. I also used Eugene's read_all() and part of write_all() that he gave us. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.
+In this assignment, I referenced the man pages for a lot of functions, discussed high-level ideas from folks in the Discord, and spoke to tutors and TAs about problems/ideas for my implementation. I also used Eugene's read_all() and part of write_all() that he gave us. That being said, all code is my own and I have not shown nor seen any code from classmates or any other resource that is prohibited.
 
 I feel it is neccessary to mention that I referenced the Linked List code Eugene gave us back in Fall 2020 when I took CSE13s. While they are quite different now, I built the one in this project with that in mind.
 
